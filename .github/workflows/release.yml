@@ -107,7 +107,7 @@ jobs:
       # The token must be a Docker Hub PAT with write access to the repository.
       - name: Sync Docker Hub description
         if: env.DOCKERHUB_USERNAME != ''
-        uses: peter-evans/dockerhub-description@v4
+        uses: peter-evans/dockerhub-description@v5
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
