@@ -1,0 +1,27 @@
+# OpenConsole
+
+> A browser-only console for LocalStack, MinIO, or real AWS. There is no server: the browser talks to the endpoint directly using the AWS SDK, and connection settings are stored in the browser's localStorage. Because requests come from the visitor's browser, the app can be hosted on a public domain and still reach each visitor's own local backend.
+
+## Overview
+
+- Free and public domain software (The Unlicense) — anyone may use, modify, and redistribute it.
+- Stack: React 18 + Vite, TypeScript, Tailwind CSS, TanStack Query, Zustand, Zod, react-router, react-i18next, @aws-sdk/client-s3.
+- UI languages: English and Korean (auto-detected from browser locale, switchable).
+- The app auto-detects the backend (LocalStack / MinIO / AWS) and gates non-S3 service tabs to LocalStack.
+
+## Features
+
+- Buckets: list, create, delete (with force-delete of contents).
+- Objects: prefix/folder browsing with a parent (`..`) row, upload (drag & drop), create folders and text files, edit text, download, delete.
+- Image objects: click to preview.
+- Object details: content type (MIME), size, last modified, ETag, user metadata, tags, and the direct object URL.
+- Bucket properties (useful for creating IaC drift): versioning, tags, encryption, static website hosting (index/error documents), CORS, bucket policy, and ARN.
+
+## Setup notes
+
+- The target backend must allow CORS from the app's origin for browser requests to succeed.
+- Credentials are stored in plain text in the browser's localStorage; least-privilege keys are recommended, especially for real AWS.
+
+## Docs
+
+- [User guide](/readme.html): introduction, how to run (local, Docker, hosted), and required setup for AWS, LocalStack, MinIO, and other backends.

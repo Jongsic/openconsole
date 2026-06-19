@@ -1,0 +1,86 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    tags: ["v*"] # deploy only signed release tags (see verify-tag gate below)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one deploy at a time; cancel any in progress
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  # Gate: the triggering tag must carry a valid GPG signature from a trusted key.
+  verify-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # checkout leaves the triggering tag as a lightweight ref to the commit;
+      # re-fetch the annotated tag object so its signature can be verified.
+      - name: Fetch annotated tag object
+        run: git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
+      - name: Import trusted signing key
+        env:
+          SIGNING_PUBLIC_KEY: ${{ vars.SIGNING_PUBLIC_KEY }}
+        run: printf '%s' "$SIGNING_PUBLIC_KEY" | gpg --import
+      - name: Verify tag signature
+        run: git verify-tag "$GITHUB_REF_NAME"
+
+  build:
+    needs: verify-tag
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24" # always install the latest 24.x LTS
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Project pages (<user>.github.io/<repo>/) are served under a sub-path -> compute base.
+      # User/org pages (the <user>.github.io repo) are served at root (/).
+      - name: Compute base path
+        id: base
+        run: |
+          repo="${{ github.event.repository.name }}"
+          if [[ "$repo" == *.github.io ]]; then
+            echo "base=/" >> "$GITHUB_OUTPUT"
+          else
+            echo "base=/$repo/" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build
+        env:
+          VITE_BASE: ${{ steps.base.outputs.base }}
+        run: pnpm build
+
+      # SPA refresh/deep-link support (GitHub Pages has no SPA fallback)
+      - name: SPA fallback
+        run: cp dist/index.html dist/404.html
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

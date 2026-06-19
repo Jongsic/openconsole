@@ -1,0 +1,183 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "create": "Create",
+    "delete": "Delete",
+    "apply": "Apply",
+    "close": "Close",
+    "refresh": "Refresh",
+    "loading": "Loading…",
+    "name": "Name",
+    "size": "Size",
+    "modified": "Modified",
+    "download": "Download",
+    "edit": "Edit",
+    "copy": "Copy",
+    "copied": "Copied",
+    "add": "Add",
+    "remove": "Remove",
+    "settings": "Settings",
+    "language": "Language",
+    "learnMore": "Learn more",
+    "open": "Open",
+    "details": "Details"
+  },
+  "nav": {
+    "comingSoon": "soon",
+    "comingSoonBody": "The {{service}} section is coming soon.",
+    "disabledForBackend": "Not available for the detected backend ({{backend}})."
+  },
+  "setup": {
+    "title": "Connect to a backend",
+    "intro": "OpenConsole talks to your backend directly from the browser. Configure the connection to get started.",
+    "detecting": "Detecting backend on the default endpoint…",
+    "detected": "Detected: {{backend}}",
+    "notDetected": "No backend auto-detected. Enter the settings manually.",
+    "useDetected": "Use detected settings",
+    "configureManually": "Configure manually",
+    "confirm": "Connect"
+  },
+  "settings": {
+    "title": "Connection settings",
+    "endpoint": "Endpoint",
+    "endpointHint": "Leave empty to use real AWS. Use http://localhost:4566 for LocalStack, http://localhost:9000 for MinIO.",
+    "region": "Region",
+    "accessKeyId": "Access key ID",
+    "secretAccessKey": "Secret access key",
+    "forcePathStyle": "Force path-style addressing",
+    "forcePathStyleHint": "Recommended for LocalStack/MinIO.",
+    "websiteEndpoint": "Static website host",
+    "websiteEndpointHint": "Host (with port) that serves static website hosting. Backend-specific.",
+    "detect": "Detect",
+    "detecting": "Detecting…",
+    "discoverHint": "Detected backends — click to fill the form:",
+    "noCandidates": "No local backend found. Enter settings manually.",
+    "credsHint": "Default keys may be filled in — replace them with your real access key / secret.",
+    "testConnection": "Test connection",
+    "testing": "Testing…",
+    "testOk": "Connection succeeded",
+    "testFirst": "Run a connection test first",
+    "backend": "Backend",
+    "awsWarning": "Credentials are stored in your browser's localStorage in plain text. Use a least-privilege IAM key, especially for real AWS.",
+    "corsNote": "The target bucket/backend must allow CORS from this site's origin for browser requests to succeed.",
+    "corsFixShort": "CORS configuration is required.",
+    "allowOrigin": "Allow this origin on your backend:",
+    "noticeShort": "Connection & credential notes",
+    "errCreds": "Access key / secret is invalid or lacks permission.",
+    "errOther": "Connection failed.",
+    "reset": "Reset"
+  },
+  "backend": {
+    "localstack": "LocalStack",
+    "minio": "MinIO",
+    "aws": "AWS",
+    "unknown": "Unknown / generic S3",
+    "none": "Not connected"
+  },
+  "bucket": {
+    "heading": "Buckets",
+    "subtitle": "S3",
+    "create": "Create bucket",
+    "createTitle": "Create bucket",
+    "namePlaceholder": "Bucket name (lowercase, digits, hyphen)",
+    "deleteTitle": "Delete bucket",
+    "deleteConfirm": "Delete bucket \"{{name}}\"?",
+    "forceDelete": "Also delete all objects inside (non-empty bucket)",
+    "none": "No buckets",
+    "selectPrompt": "Select a bucket on the left",
+    "created": "Bucket \"{{name}}\" created",
+    "deleted": "Bucket \"{{name}}\" deleted"
+  },
+  "object": {
+    "folder": "Folder",
+    "newFolder": "Folder",
+    "newFolderTitle": "New folder",
+    "folderNamePlaceholder": "Folder name",
+    "newText": "Text",
+    "upload": "Upload",
+    "properties": "Properties",
+    "dropHere": "Drop files here to upload",
+    "empty": "Empty. Drag files here or upload.",
+    "deleteTitle": "Delete object",
+    "deleteConfirm": "Delete \"{{key}}\"?",
+    "uploaded": "Upload complete",
+    "deleted": "Deleted",
+    "folderCreated": "Folder created",
+    "parent": "Parent folder"
+  },
+  "details": {
+    "title": "Object: {{key}}",
+    "preview": "Preview",
+    "contentType": "Content type (MIME)",
+    "etag": "ETag",
+    "url": "Object URL",
+    "urlNote": "Opens only if the object is publicly accessible.",
+    "metadata": "User metadata",
+    "noMetadata": "No user metadata",
+    "tags": "Tags",
+    "noTags": "No tags"
+  },
+  "editor": {
+    "editTitle": "Edit: {{key}}",
+    "createTitle": "New text file ({{prefix}})",
+    "rootPrefix": "root",
+    "fileNamePlaceholder": "File name (e.g. config.json)",
+    "contentPlaceholder": "Content…",
+    "saved": "Saved",
+    "needName": "Enter a file name"
+  },
+  "props": {
+    "title": "Bucket properties: {{name}}",
+    "arn": "ARN",
+    "applied": "Applied",
+    "currentState": "Current state",
+    "sections": {
+      "versioning": "Versioning",
+      "tagging": "Tags",
+      "encryption": "Encryption",
+      "website": "Static website",
+      "cors": "CORS",
+      "policy": "Bucket policy"
+    },
+    "versioning": {
+      "label": "Versioning",
+      "note": "Once enabled, a bucket can only be Suspended, not disabled."
+    },
+    "tagging": {
+      "count": "Tags ({{count}})",
+      "none": "No tags.",
+      "addTag": "Add tag",
+      "emptyDeletes": "Applying with no tags removes the tag set."
+    },
+    "encryption": {
+      "use": "Use default encryption (SSE)",
+      "algorithm": "Algorithm",
+      "enabledWith": "Enabled ({{algorithm}})",
+      "disabled": "Disabled"
+    },
+    "website": {
+      "use": "Enable static website hosting",
+      "indexDocument": "Index document",
+      "errorDocument": "Error document (optional)",
+      "endpoint": "Website endpoint",
+      "enabledWith": "Enabled (index: {{index}})",
+      "disabled": "Disabled",
+      "publicNote": "To serve publicly, allow s3:GetObject via a bucket policy."
+    },
+    "cors": {
+      "label": "CORS configuration",
+      "hint": "CORSRules array (JSON). Apply empty to remove CORS.",
+      "fillExample": "Fill example"
+    },
+    "policy": {
+      "label": "Bucket policy",
+      "hint": "Bucket policy document (JSON). Apply empty to remove the policy.",
+      "fillExample": "Fill example"
+    }
+  },
+  "error": {
+    "connection": "Cannot reach the endpoint. Check that the backend is running and CORS allows this origin.",
+    "loadContent": "Failed to load content"
+  }
+}
