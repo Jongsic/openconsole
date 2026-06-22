@@ -5,7 +5,7 @@ import { api } from "@/lib/ec2-api";
 import type { Ec2LaunchInput } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useToast } from "./toast";
-import { Button, Field, Modal, TextInput } from "./ui";
+import { Button, Field, Modal, Select, TextInput } from "./ui";
 
 const INSTANCE_TYPES = [
   "t2.micro",
@@ -81,21 +81,17 @@ export function Ec2LaunchModal({ open, onClose }: { open: boolean; onClose: () =
 
         <Field label={t("ec2.launch.ami")}>
           <TextInput value={imageId} onChange={(e) => setImageId(e.target.value)} />
-          <span className="text-xs text-slate-400">{t("ec2.launch.amiHint")}</span>
+          <span className="text-xs text-slate-500">{t("ec2.launch.amiHint")}</span>
         </Field>
 
         <Field label={t("ec2.launch.instanceType")}>
-          <select
-            value={instanceType}
-            onChange={(e) => setInstanceType(e.target.value)}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand"
-          >
+          <Select value={instanceType} onChange={(e) => setInstanceType(e.target.value)}>
             {INSTANCE_TYPES.map((it) => (
               <option key={it} value={it}>
                 {it}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
 
         <Field label={t("ec2.launch.count")}>
@@ -118,26 +114,22 @@ export function Ec2LaunchModal({ open, onClose }: { open: boolean; onClose: () =
         </button>
 
         {advanced && (
-          <div className="flex flex-col gap-3 rounded-md border border-slate-200 bg-slate-50 p-3">
+          <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
             <Field label={t("ec2.launch.keyName")}>
-              <select
-                value={keyName}
-                onChange={(e) => setKeyName(e.target.value)}
-                className="rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand"
-              >
+              <Select value={keyName} onChange={(e) => setKeyName(e.target.value)}>
                 <option value="">{t("ec2.launch.none")}</option>
                 {(keyPairs.data ?? []).map((k) => (
                   <option key={k.keyName} value={k.keyName}>
                     {k.keyName}
                   </option>
                 ))}
-              </select>
+              </Select>
             </Field>
 
             <Field label={t("ec2.launch.securityGroups")}>
               <div className="max-h-32 overflow-auto rounded-md border border-slate-300 bg-white p-1.5">
                 {(sgs.data ?? []).length === 0 ? (
-                  <p className="px-1 py-1 text-xs text-slate-400">
+                  <p className="px-1 py-1 text-xs text-slate-500">
                     {t("ec2.launch.noSecurityGroups")}
                   </p>
                 ) : (
@@ -145,8 +137,8 @@ export function Ec2LaunchModal({ open, onClose }: { open: boolean; onClose: () =
                     <label
                       key={g.groupId}
                       className={cn(
-                        "flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-xs hover:bg-slate-50",
-                        securityGroupIds.includes(g.groupId) && "bg-brand-fg",
+                        "flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-xs transition-colors hover:bg-slate-50",
+                        securityGroupIds.includes(g.groupId) && "bg-brand-fg hover:bg-brand-tint",
                       )}
                     >
                       <input
@@ -154,21 +146,17 @@ export function Ec2LaunchModal({ open, onClose }: { open: boolean; onClose: () =
                         checked={securityGroupIds.includes(g.groupId)}
                         onChange={() => toggleSg(g.groupId)}
                       />
-                      <span className="font-medium text-slate-700">{g.groupName}</span>
-                      <span className="font-mono text-slate-400">{g.groupId}</span>
+                      <span className="font-medium text-slate-800">{g.groupName}</span>
+                      <span className="font-mono text-slate-500">{g.groupId}</span>
                     </label>
                   ))
                 )}
               </div>
-              <span className="text-xs text-slate-400">{t("ec2.launch.securityGroupsHint")}</span>
+              <span className="text-xs text-slate-500">{t("ec2.launch.securityGroupsHint")}</span>
             </Field>
 
             <Field label={t("ec2.launch.subnet")}>
-              <select
-                value={subnetId}
-                onChange={(e) => setSubnetId(e.target.value)}
-                className="rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand"
-              >
+              <Select value={subnetId} onChange={(e) => setSubnetId(e.target.value)}>
                 <option value="">{t("ec2.launch.defaultSubnet")}</option>
                 {(subnets.data ?? []).map((s) => (
                   <option key={s.subnetId} value={s.subnetId}>
@@ -178,7 +166,7 @@ export function Ec2LaunchModal({ open, onClose }: { open: boolean; onClose: () =
                     {s.cidrBlock ? ` ${s.cidrBlock}` : ""}
                   </option>
                 ))}
-              </select>
+              </Select>
             </Field>
           </div>
         )}

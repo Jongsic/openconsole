@@ -12,6 +12,11 @@ body,
   height: 100%;
 }
 
+/* Not a responsive app — keep a fixed minimum width and scroll horizontally below it. */
+#root {
+  min-width: 1280px;
+}
+
 body {
   @apply bg-slate-50 text-slate-800 antialiased;
 }

@@ -1,15 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Play, Plus, RefreshCw, RotateCw, Server, Square, Terminal, Trash2 } from "lucide-react";
+import { Play, Plus, RotateCw, Server, Square, Terminal, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Ec2DetailPanel } from "@/components/ec2-instance-detail";
 import { Ec2LaunchModal } from "@/components/ec2-launch-modal";
-import { ResourceError } from "@/components/resource-error";
+import {
+  PageHeader,
+  ResourceTable,
+  StatusBadge,
+  type StatusTone,
+  Td,
+  Th,
+  Tr,
+} from "@/components/kit";
 import { useToast } from "@/components/toast";
-import { Button, Modal, Spinner } from "@/components/ui";
+import { Button, Modal } from "@/components/ui";
 import { api } from "@/lib/ec2-api";
 import type { Ec2InstanceAction, Ec2InstanceState, Ec2InstanceSummary } from "@/lib/types";
-import { cn, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { useSettings } from "@/store/settings";
 
 /** States that are mid-transition and will change on their own → worth polling for. */
@@ -19,26 +27,17 @@ export const TRANSITIONAL_STATES = new Set<Ec2InstanceState>([
   "shutting-down",
 ]);
 
-const STATE_STYLES: Record<Ec2InstanceState, string> = {
-  running: "bg-green-100 text-green-700",
-  stopped: "bg-slate-100 text-slate-500",
-  pending: "bg-amber-100 text-amber-700",
-  stopping: "bg-amber-100 text-amber-700",
-  "shutting-down": "bg-amber-100 text-amber-700",
-  terminated: "bg-red-100 text-red-600",
+const STATE_TONES: Record<Ec2InstanceState, StatusTone> = {
+  running: "green",
+  stopped: "neutral",
+  pending: "amber",
+  stopping: "amber",
+  "shutting-down": "amber",
+  terminated: "red",
 };
 
 export function StateBadge({ state }: { state: Ec2InstanceState }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium",
-        STATE_STYLES[state] ?? "bg-slate-100 text-slate-500",
-      )}
-    >
-      {state}
-    </span>
-  );
+  return <StatusBadge tone={STATE_TONES[state] ?? "neutral"}>{state}</StatusBadge>;
 }
 
 export function Ec2Page() {
@@ -95,131 +94,108 @@ export function Ec2Page() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-2 border-b bg-white px-4 py-3">
-        <Server className="h-5 w-5 text-brand" />
-        <div className="flex-1">
-          <div className="text-sm font-semibold text-slate-800">{t("ec2.heading")}</div>
-          <div className="text-[11px] text-slate-400">{t("ec2.subtitle")}</div>
-        </div>
-
-        <div className="flex items-center gap-1.5">
-          <Button onClick={() => setLaunchOpen(true)}>
-            <Plus className="h-4 w-4" /> {t("ec2.launch.button")}
-          </Button>
-          <Button
-            variant="secondary"
-            disabled={!can("start") || action.isPending}
-            onClick={() => current && action.mutate({ kind: "start", id: current.instanceId })}
-          >
-            <Play className="h-4 w-4" /> {t("ec2.action.start")}
-          </Button>
-          <Button
-            variant="secondary"
-            disabled={!can("stop") || action.isPending}
-            onClick={() => current && action.mutate({ kind: "stop", id: current.instanceId })}
-          >
-            <Square className="h-4 w-4" /> {t("ec2.action.stop")}
-          </Button>
-          <Button
-            variant="secondary"
-            disabled={!can("reboot") || action.isPending}
-            onClick={() => current && action.mutate({ kind: "reboot", id: current.instanceId })}
-          >
-            <RotateCw className="h-4 w-4" /> {t("ec2.action.reboot")}
-          </Button>
-          <Button
-            variant="danger"
-            disabled={!can("terminate") || action.isPending}
-            onClick={() => current && setTerminateTarget(current.instanceId)}
-          >
-            <Trash2 className="h-4 w-4" /> {t("ec2.action.terminate")}
-          </Button>
-          <button
-            type="button"
-            title={t("common.refresh")}
-            onClick={() => qc.invalidateQueries({ queryKey: ["ec2-instances"] })}
-            className="ml-1 text-slate-400 hover:text-slate-600"
-          >
-            <RefreshCw className={cn("h-4 w-4", instances.isFetching && "animate-spin")} />
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        icon={Server}
+        title={t("ec2.heading")}
+        subtitle={t("ec2.subtitle")}
+        onRefresh={() => qc.invalidateQueries({ queryKey: ["ec2-instances"] })}
+        refreshing={instances.isFetching}
+        refreshTitle={t("common.refresh")}
+        actions={
+          <>
+            <Button onClick={() => setLaunchOpen(true)}>
+              <Plus className="h-4 w-4" /> {t("ec2.launch.button")}
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={!can("start") || action.isPending}
+              onClick={() => current && action.mutate({ kind: "start", id: current.instanceId })}
+            >
+              <Play className="h-4 w-4" /> {t("ec2.action.start")}
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={!can("stop") || action.isPending}
+              onClick={() => current && action.mutate({ kind: "stop", id: current.instanceId })}
+            >
+              <Square className="h-4 w-4" /> {t("ec2.action.stop")}
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={!can("reboot") || action.isPending}
+              onClick={() => current && action.mutate({ kind: "reboot", id: current.instanceId })}
+            >
+              <RotateCw className="h-4 w-4" /> {t("ec2.action.reboot")}
+            </Button>
+            <Button
+              variant="danger"
+              disabled={!can("terminate") || action.isPending}
+              onClick={() => current && setTerminateTarget(current.instanceId)}
+            >
+              <Trash2 className="h-4 w-4" /> {t("ec2.action.terminate")}
+            </Button>
+          </>
+        }
+      />
 
       <div className="flex-1 overflow-auto">
-        {instances.isLoading ? (
-          <div className="flex justify-center py-16">
-            <Spinner />
-          </div>
-        ) : instances.isError ? (
-          <ResourceError error={instances.error} service="EC2" />
-        ) : instances.data && instances.data.length > 0 ? (
-          <table className="w-full text-left text-sm">
-            <thead className="sticky top-0 bg-slate-50 text-[11px] uppercase text-slate-400">
-              <tr>
-                <th className="px-4 py-2 font-medium">{t("ec2.col.name")}</th>
-                <th className="px-4 py-2 font-medium">{t("ec2.col.instanceId")}</th>
-                <th className="px-4 py-2 font-medium">{t("ec2.col.state")}</th>
-                <th className="px-4 py-2 font-medium">{t("ec2.col.type")}</th>
-                <th className="px-4 py-2 font-medium">{t("ec2.col.az")}</th>
-                <th className="px-4 py-2 font-medium">{t("ec2.col.publicIp")}</th>
-                <th className="px-4 py-2 font-medium">{t("ec2.col.privateIp")}</th>
-                <th className="px-4 py-2 font-medium">{t("ec2.col.launched")}</th>
-                {backend === "floci" && <th className="px-4 py-2" />}
-              </tr>
-            </thead>
-            <tbody>
-              {instances.data.map((i: Ec2InstanceSummary) => (
-                <tr
-                  key={i.instanceId}
-                  onClick={() => setSelected(i.instanceId)}
-                  className={cn(
-                    "cursor-pointer border-b border-slate-100 hover:bg-slate-50",
-                    selected === i.instanceId && "bg-brand-fg hover:bg-brand-fg",
+        <ResourceTable
+          isLoading={instances.isLoading}
+          isError={instances.isError}
+          error={instances.error}
+          service="EC2"
+          data={instances.data}
+          getKey={(i) => i.instanceId}
+          empty={{ icon: Server, message: t("ec2.none") }}
+          head={
+            <tr>
+              <Th>{t("ec2.col.name")}</Th>
+              <Th>{t("ec2.col.instanceId")}</Th>
+              <Th>{t("ec2.col.state")}</Th>
+              <Th>{t("ec2.col.type")}</Th>
+              <Th>{t("ec2.col.az")}</Th>
+              <Th>{t("ec2.col.publicIp")}</Th>
+              <Th>{t("ec2.col.privateIp")}</Th>
+              <Th>{t("ec2.col.launched")}</Th>
+              {backend === "floci" && <Th />}
+            </tr>
+          }
+          row={(i: Ec2InstanceSummary) => (
+            <Tr
+              key={i.instanceId}
+              onClick={() => setSelected(i.instanceId)}
+              selected={selected === i.instanceId}
+            >
+              <Td className="font-medium text-slate-700">{i.name ?? "—"}</Td>
+              <Td mono>{i.instanceId}</Td>
+              <Td>
+                <StateBadge state={i.state} />
+              </Td>
+              <Td>{i.instanceType ?? "—"}</Td>
+              <Td>{i.availabilityZone ?? "—"}</Td>
+              <Td mono>{i.publicIp ?? "—"}</Td>
+              <Td mono>{i.privateIp ?? "—"}</Td>
+              <Td muted>{formatDate(i.launchTime, i18n.language)}</Td>
+              {backend === "floci" && (
+                <Td className="text-right">
+                  {i.state === "running" && (
+                    <button
+                      type="button"
+                      title={t("ec2.execHint")}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        copyExec(i.instanceId);
+                      }}
+                      className="inline-flex items-center gap-1 rounded border border-slate-200 px-1.5 py-1 text-[11px] text-slate-500 hover:border-brand hover:text-brand"
+                    >
+                      <Terminal className="h-3.5 w-3.5" /> {t("ec2.exec")}
+                    </button>
                   )}
-                >
-                  <td className="px-4 py-2 font-medium text-slate-700">{i.name ?? "—"}</td>
-                  <td className="px-4 py-2 font-mono text-xs text-slate-500">{i.instanceId}</td>
-                  <td className="px-4 py-2">
-                    <StateBadge state={i.state} />
-                  </td>
-                  <td className="px-4 py-2 text-slate-600">{i.instanceType ?? "—"}</td>
-                  <td className="px-4 py-2 text-slate-600">{i.availabilityZone ?? "—"}</td>
-                  <td className="px-4 py-2 font-mono text-xs text-slate-500">
-                    {i.publicIp ?? "—"}
-                  </td>
-                  <td className="px-4 py-2 font-mono text-xs text-slate-500">
-                    {i.privateIp ?? "—"}
-                  </td>
-                  <td className="px-4 py-2 text-xs text-slate-500">
-                    {formatDate(i.launchTime, i18n.language)}
-                  </td>
-                  {backend === "floci" && (
-                    <td className="px-4 py-2 text-right">
-                      {i.state === "running" && (
-                        <button
-                          type="button"
-                          title={t("ec2.execHint")}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            copyExec(i.instanceId);
-                          }}
-                          className="inline-flex items-center gap-1 rounded border border-slate-200 px-1.5 py-1 text-[11px] text-slate-500 hover:border-brand hover:text-brand"
-                        >
-                          <Terminal className="h-3.5 w-3.5" /> {t("ec2.exec")}
-                        </button>
-                      )}
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <div className="flex flex-col items-center justify-center gap-3 py-16 text-slate-400">
-            <Server className="h-10 w-10" />
-            <p className="text-sm">{t("ec2.none")}</p>
-          </div>
-        )}
+                </Td>
+              )}
+            </Tr>
+          )}
+        />
       </div>
 
       {current && (

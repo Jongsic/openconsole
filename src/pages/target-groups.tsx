@@ -1,23 +1,44 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, RefreshCw, Target, Trash2, X } from "lucide-react";
+import { Plus, Target, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import {
+  PageHeader,
+  PanelHeader,
+  ResourceTable,
+  StatusBadge,
+  type StatusTone,
+  Table,
+  TableLoading,
+  Td,
+  Th,
+  Thead,
+  Tr,
+} from "@/components/kit";
 import { ResizableBottomPanel } from "@/components/resizable-bottom-panel";
-import { ResourceError } from "@/components/resource-error";
 import { TagsEditor } from "@/components/tags-editor";
 import { useToast } from "@/components/toast";
-import { Button, Field, Modal, Spinner, TextInput } from "@/components/ui";
+import {
+  Button,
+  CONTROL_CLASS,
+  Field,
+  FieldLabel,
+  FormCard,
+  Modal,
+  Select,
+  TextInput,
+} from "@/components/ui";
 import { api as ec2 } from "@/lib/ec2-api";
 import { api } from "@/lib/elbv2-api";
 import type { TargetGroupSummary, TargetHealthEntry } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const HEALTH_STYLES: Record<string, string> = {
-  healthy: "bg-green-100 text-green-700",
-  unhealthy: "bg-red-100 text-red-600",
-  initial: "bg-amber-100 text-amber-700",
-  draining: "bg-slate-100 text-slate-500",
-  unused: "bg-slate-100 text-slate-500",
+const HEALTH_TONES: Record<string, StatusTone> = {
+  healthy: "green",
+  unhealthy: "red",
+  initial: "amber",
+  draining: "neutral",
+  unused: "neutral",
 };
 
 export function TargetGroupsPage() {
@@ -44,89 +65,69 @@ export function TargetGroupsPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-2 border-b bg-white px-4 py-3">
-        <Target className="h-5 w-5 text-brand" />
-        <div className="flex-1">
-          <div className="text-sm font-semibold text-slate-800">{t("tg.heading")}</div>
-          <div className="text-[11px] text-slate-400">{t("tg.subtitle")}</div>
-        </div>
-        <Button onClick={() => setCreateOpen(true)}>
-          <Plus className="h-4 w-4" /> {t("tg.create")}
-        </Button>
-        <button
-          type="button"
-          title={t("common.refresh")}
-          onClick={() => qc.invalidateQueries({ queryKey: ["target-groups"] })}
-          className="ml-1 text-slate-400 hover:text-slate-600"
-        >
-          <RefreshCw className={cn("h-4 w-4", tgs.isFetching && "animate-spin")} />
-        </button>
-      </div>
+      <PageHeader
+        icon={Target}
+        title={t("tg.heading")}
+        subtitle={t("tg.subtitle")}
+        onRefresh={() => qc.invalidateQueries({ queryKey: ["target-groups"] })}
+        refreshing={tgs.isFetching}
+        refreshTitle={t("common.refresh")}
+        actions={
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus className="h-4 w-4" /> {t("tg.create")}
+          </Button>
+        }
+      />
 
       <div className="flex-1 overflow-auto">
-        {tgs.isLoading ? (
-          <div className="flex justify-center py-16">
-            <Spinner />
-          </div>
-        ) : tgs.isError ? (
-          <ResourceError error={tgs.error} service="ELBv2 target groups" />
-        ) : tgs.data && tgs.data.length > 0 ? (
-          <table className="w-full text-left text-sm">
-            <thead className="sticky top-0 bg-slate-50 text-[11px] uppercase text-slate-400">
-              <tr>
-                <th className="px-4 py-2 font-medium">{t("tg.col.name")}</th>
-                <th className="px-4 py-2 font-medium">{t("tg.col.protocol")}</th>
-                <th className="px-4 py-2 font-medium">{t("tg.col.targetType")}</th>
-                <th className="px-4 py-2 font-medium">{t("tg.col.vpc")}</th>
-                <th className="px-4 py-2 font-medium">{t("tg.col.healthCheck")}</th>
-                <th className="px-4 py-2 font-medium">{t("tg.col.loadBalancers")}</th>
-                <th className="px-4 py-2" />
-              </tr>
-            </thead>
-            <tbody>
-              {tgs.data.map((tg: TargetGroupSummary) => (
-                <tr
-                  key={tg.arn}
-                  onClick={() => setSelected(tg.arn)}
-                  className={cn(
-                    "cursor-pointer border-b border-slate-100 hover:bg-slate-50",
-                    selected === tg.arn && "bg-brand-fg hover:bg-brand-fg",
-                  )}
+        <ResourceTable
+          isLoading={tgs.isLoading}
+          isError={tgs.isError}
+          error={tgs.error}
+          service="ELBv2 target groups"
+          data={tgs.data}
+          getKey={(tg) => tg.arn}
+          empty={{ icon: Target, message: t("tg.none") }}
+          head={
+            <tr>
+              <Th>{t("tg.col.name")}</Th>
+              <Th>{t("tg.col.protocol")}</Th>
+              <Th>{t("tg.col.targetType")}</Th>
+              <Th>{t("tg.col.vpc")}</Th>
+              <Th>{t("tg.col.healthCheck")}</Th>
+              <Th>{t("tg.col.loadBalancers")}</Th>
+              <Th />
+            </tr>
+          }
+          row={(tg: TargetGroupSummary) => (
+            <Tr key={tg.arn} onClick={() => setSelected(tg.arn)} selected={selected === tg.arn}>
+              <Td className="font-medium text-slate-700">{tg.name}</Td>
+              <Td>
+                {tg.protocol ?? "—"}
+                {tg.port != null ? `:${tg.port}` : ""}
+              </Td>
+              <Td>{tg.targetType ?? "—"}</Td>
+              <Td mono>{tg.vpcId ?? "—"}</Td>
+              <Td muted>
+                {tg.healthCheckProtocol ?? "—"} {tg.healthCheckPath ?? ""}
+              </Td>
+              <Td>{tg.loadBalancerArns.length}</Td>
+              <Td className="text-right">
+                <button
+                  type="button"
+                  title={t("common.delete")}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDeleteTarget(tg);
+                  }}
+                  className="rounded p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-red-600"
                 >
-                  <td className="px-4 py-2 font-medium text-slate-700">{tg.name}</td>
-                  <td className="px-4 py-2 text-slate-600">
-                    {tg.protocol ?? "—"}
-                    {tg.port != null ? `:${tg.port}` : ""}
-                  </td>
-                  <td className="px-4 py-2 text-slate-600">{tg.targetType ?? "—"}</td>
-                  <td className="px-4 py-2 font-mono text-xs text-slate-500">{tg.vpcId ?? "—"}</td>
-                  <td className="px-4 py-2 text-xs text-slate-500">
-                    {tg.healthCheckProtocol ?? "—"} {tg.healthCheckPath ?? ""}
-                  </td>
-                  <td className="px-4 py-2 text-slate-600">{tg.loadBalancerArns.length}</td>
-                  <td className="px-4 py-2 text-right">
-                    <button
-                      type="button"
-                      title={t("common.delete")}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeleteTarget(tg);
-                      }}
-                      className="text-slate-400 hover:text-red-600"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <div className="flex flex-col items-center justify-center gap-3 py-16 text-slate-400">
-            <Target className="h-10 w-10" />
-            <p className="text-sm">{t("tg.none")}</p>
-          </div>
-        )}
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </Td>
+            </Tr>
+          )}
+        />
       </div>
 
       {current && <HealthPanel key={current.arn} tg={current} onClose={() => setSelected(null)} />}
@@ -232,133 +233,141 @@ function TgAttributes({ tg }: { tg: TargetGroupSummary }) {
     onError: (e) => toast.error((e as Error).message),
   });
 
-  const numCls =
-    "w-16 rounded-md border border-slate-300 px-2 py-1 outline-none focus:border-brand";
+  const numCls = cn(CONTROL_CLASS, "w-20 py-1.5");
 
   return (
-    <div className="mb-4 rounded-md border border-slate-200 bg-slate-50 p-3 text-xs">
-      {/* health check */}
-      <div className="mb-3 flex flex-wrap items-end gap-3">
-        <span className="self-center font-medium uppercase text-slate-400">
-          {t("tg.healthCheck")}
-        </span>
-        {isHttp && (
-          <label className="flex flex-col gap-1 text-slate-500">
-            {t("tg.hcPath")}
+    <div className="mb-4 flex flex-col gap-4">
+      <FormCard title={t("tg.healthCheck")}>
+        <div className="flex flex-wrap items-end gap-3">
+          {isHttp && (
+            <label className="flex flex-col gap-1.5">
+              <FieldLabel>{t("tg.hcPath")}</FieldLabel>
+              <input
+                value={hcPath}
+                onChange={(e) => setHcPath(e.target.value)}
+                className={cn(CONTROL_CLASS, "w-32 py-1.5 font-mono")}
+              />
+            </label>
+          )}
+          <label className="flex flex-col gap-1.5">
+            <FieldLabel>{t("tg.hcInterval")}</FieldLabel>
             <input
-              value={hcPath}
-              onChange={(e) => setHcPath(e.target.value)}
-              className="w-28 rounded-md border border-slate-300 px-2 py-1 font-mono outline-none focus:border-brand"
+              type="number"
+              min={1}
+              value={hcInterval}
+              onChange={(e) => setHcInterval(Math.max(1, Number(e.target.value) || 1))}
+              className={numCls}
             />
           </label>
-        )}
-        <label className="flex flex-col gap-1 text-slate-500">
-          {t("tg.hcInterval")}
-          <input
-            type="number"
-            min={1}
-            value={hcInterval}
-            onChange={(e) => setHcInterval(Math.max(1, Number(e.target.value) || 1))}
-            className={numCls}
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-slate-500">
-          {t("tg.hcTimeout")}
-          <input
-            type="number"
-            min={1}
-            value={hcTimeout}
-            onChange={(e) => setHcTimeout(Math.max(1, Number(e.target.value) || 1))}
-            className={numCls}
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-slate-500">
-          {t("tg.hcHealthy")}
-          <input
-            type="number"
-            min={1}
-            value={hcHealthy}
-            onChange={(e) => setHcHealthy(Math.max(1, Number(e.target.value) || 1))}
-            className={numCls}
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-slate-500">
-          {t("tg.hcUnhealthy")}
-          <input
-            type="number"
-            min={1}
-            value={hcUnhealthy}
-            onChange={(e) => setHcUnhealthy(Math.max(1, Number(e.target.value) || 1))}
-            className={numCls}
-          />
-        </label>
-        {isHttp && (
-          <label className="flex flex-col gap-1 text-slate-500">
-            {t("tg.hcMatcher")}
+          <label className="flex flex-col gap-1.5">
+            <FieldLabel>{t("tg.hcTimeout")}</FieldLabel>
             <input
-              value={hcMatcher}
-              onChange={(e) => setHcMatcher(e.target.value)}
-              className="w-20 rounded-md border border-slate-300 px-2 py-1 font-mono outline-none focus:border-brand"
+              type="number"
+              min={1}
+              value={hcTimeout}
+              onChange={(e) => setHcTimeout(Math.max(1, Number(e.target.value) || 1))}
+              className={numCls}
             />
           </label>
-        )}
-        <Button variant="secondary" loading={saveHc.isPending} onClick={() => saveHc.mutate()}>
-          {t("common.apply")}
-        </Button>
-      </div>
-
-      <div className="flex flex-wrap items-end gap-3 border-t border-slate-200 pt-3">
-        <label className="flex items-center gap-1.5 text-slate-600">
-          <input
-            type="checkbox"
-            checked={stickiness}
-            onChange={(e) => setStickiness(e.target.checked)}
-          />
-          {t("tg.stickiness")}
-        </label>
-        <label className="flex flex-col gap-1 text-slate-500">
-          {t("tg.stickinessDuration")}
-          <input
-            type="number"
-            value={duration}
-            onChange={(e) => setDuration(Math.max(1, Number(e.target.value) || 1))}
-            disabled={!stickiness}
-            className="w-24 rounded-md border border-slate-300 px-2 py-1 outline-none focus:border-brand disabled:bg-slate-100"
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-slate-500">
-          {t("tg.deregDelay")}
-          <input
-            type="number"
-            value={dereg}
-            onChange={(e) => setDereg(Math.max(0, Number(e.target.value) || 0))}
-            className="w-24 rounded-md border border-slate-300 px-2 py-1 outline-none focus:border-brand"
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-slate-500">
-          {t("tg.algorithm")}
-          <select
-            value={algo}
-            onChange={(e) => setAlgo(e.target.value)}
-            className="rounded-md border border-slate-300 px-2 py-1 outline-none focus:border-brand"
+          <label className="flex flex-col gap-1.5">
+            <FieldLabel>{t("tg.hcHealthy")}</FieldLabel>
+            <input
+              type="number"
+              min={1}
+              value={hcHealthy}
+              onChange={(e) => setHcHealthy(Math.max(1, Number(e.target.value) || 1))}
+              className={numCls}
+            />
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <FieldLabel>{t("tg.hcUnhealthy")}</FieldLabel>
+            <input
+              type="number"
+              min={1}
+              value={hcUnhealthy}
+              onChange={(e) => setHcUnhealthy(Math.max(1, Number(e.target.value) || 1))}
+              className={numCls}
+            />
+          </label>
+          {isHttp && (
+            <label className="flex flex-col gap-1.5">
+              <FieldLabel>{t("tg.hcMatcher")}</FieldLabel>
+              <input
+                value={hcMatcher}
+                onChange={(e) => setHcMatcher(e.target.value)}
+                className={cn(CONTROL_CLASS, "w-24 py-1.5 font-mono")}
+              />
+            </label>
+          )}
+          <Button
+            variant="secondary"
+            className="ml-auto"
+            loading={saveHc.isPending}
+            onClick={() => saveHc.mutate()}
           >
-            <option value="round_robin">round_robin</option>
-            <option value="least_outstanding_requests">least_outstanding_requests</option>
-          </select>
-        </label>
-        <Button variant="secondary" loading={save.isPending} onClick={() => save.mutate()}>
-          {t("common.apply")}
-        </Button>
-      </div>
+            {t("common.apply")}
+          </Button>
+        </div>
+      </FormCard>
 
-      <div className="mt-3 border-t border-slate-200 pt-3">
-        <div className="mb-2 font-medium uppercase text-slate-400">{t("tags.heading")}</div>
+      <FormCard title={t("tg.attributes")}>
+        <div className="flex flex-wrap items-end gap-4">
+          <label className="flex items-center gap-2 self-center text-sm text-slate-700">
+            <input
+              type="checkbox"
+              checked={stickiness}
+              onChange={(e) => setStickiness(e.target.checked)}
+            />
+            {t("tg.stickiness")}
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <FieldLabel>{t("tg.stickinessDuration")}</FieldLabel>
+            <input
+              type="number"
+              value={duration}
+              onChange={(e) => setDuration(Math.max(1, Number(e.target.value) || 1))}
+              disabled={!stickiness}
+              className={cn(CONTROL_CLASS, "w-28 py-1.5")}
+            />
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <FieldLabel>{t("tg.deregDelay")}</FieldLabel>
+            <input
+              type="number"
+              value={dereg}
+              onChange={(e) => setDereg(Math.max(0, Number(e.target.value) || 0))}
+              className={cn(CONTROL_CLASS, "w-28 py-1.5")}
+            />
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <FieldLabel>{t("tg.algorithm")}</FieldLabel>
+            <select
+              value={algo}
+              onChange={(e) => setAlgo(e.target.value)}
+              className={cn(CONTROL_CLASS, "py-1.5")}
+            >
+              <option value="round_robin">round_robin</option>
+              <option value="least_outstanding_requests">least_outstanding_requests</option>
+            </select>
+          </label>
+          <Button
+            variant="secondary"
+            className="ml-auto"
+            loading={save.isPending}
+            onClick={() => save.mutate()}
+          >
+            {t("common.apply")}
+          </Button>
+        </div>
+      </FormCard>
+
+      <FormCard title={t("tags.heading")}>
         <TagsEditor
           current={tags.data ?? []}
           saving={saveTags.isPending}
           onSave={(tg2, removed) => saveTags.mutate({ tags: tg2, removed })}
         />
-      </div>
+      </FormCard>
     </div>
   );
 }
@@ -404,113 +413,106 @@ function HealthPanel({ tg, onClose }: { tg: TargetGroupSummary; onClose: () => v
 
   return (
     <ResizableBottomPanel storageKey="oc_panel_h_tg">
-      <div className="flex items-center gap-2 border-b px-4 py-2">
-        <span className="text-sm font-medium text-slate-700">{tg.name}</span>
-        <span className="text-xs text-slate-400">{t("tg.targets")}</span>
-        <button
-          type="button"
-          title={t("common.close")}
-          onClick={onClose}
-          className="ml-auto text-slate-400 hover:text-slate-600"
-        >
-          <X className="h-4 w-4" />
-        </button>
-      </div>
+      <PanelHeader onClose={onClose} closeTitle={t("common.close")}>
+        <span className="text-sm font-semibold text-slate-900">{tg.name}</span>
+        <span className="text-xs text-slate-500">{t("tg.targets")}</span>
+      </PanelHeader>
       <div className="flex-1 overflow-auto p-4">
         <TgAttributes tg={tg} />
 
         {/* register a new target */}
-        <div className="mb-4 flex items-end gap-1.5">
-          {tg.targetType === "instance" ? (
-            <select
-              value={targetId}
-              onChange={(e) => setTargetId(e.target.value)}
-              className="rounded-md border border-slate-300 px-2 py-1 text-xs outline-none focus:border-brand"
+        <FormCard title={t("tg.register")} className="mb-4">
+          <div className="flex flex-wrap items-end gap-3">
+            {/* biome-ignore lint/a11y/noLabelWithoutControl: the control (Select/input) is nested inside the label */}
+            <label className="flex flex-1 flex-col gap-1.5">
+              <FieldLabel>{t("tg.health.target")}</FieldLabel>
+              {tg.targetType === "instance" ? (
+                <Select
+                  value={targetId}
+                  onChange={(e) => setTargetId(e.target.value)}
+                  className="w-full py-1.5"
+                >
+                  <option value="">{t("tg.pickInstance")}</option>
+                  {(instances.data ?? []).map((i) => (
+                    <option key={i.instanceId} value={i.instanceId}>
+                      {i.name ? `${i.name} — ` : ""}
+                      {i.instanceId}
+                    </option>
+                  ))}
+                </Select>
+              ) : (
+                <input
+                  value={targetId}
+                  onChange={(e) => setTargetId(e.target.value)}
+                  placeholder={t("tg.targetIp")}
+                  className={cn(CONTROL_CLASS, "w-full min-w-[10rem] py-1.5 font-mono")}
+                />
+              )}
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <FieldLabel>{t("tg.health.port")}</FieldLabel>
+              <input
+                value={port}
+                onChange={(e) => setPort(e.target.value)}
+                placeholder={tg.port != null ? String(tg.port) : t("tg.port")}
+                className={cn(CONTROL_CLASS, "w-24 py-1.5")}
+              />
+            </label>
+            <Button
+              loading={register.isPending}
+              disabled={!targetId.trim()}
+              onClick={() => register.mutate()}
             >
-              <option value="">{t("tg.pickInstance")}</option>
-              {(instances.data ?? []).map((i) => (
-                <option key={i.instanceId} value={i.instanceId}>
-                  {i.name ? `${i.name} — ` : ""}
-                  {i.instanceId}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <input
-              value={targetId}
-              onChange={(e) => setTargetId(e.target.value)}
-              placeholder={t("tg.targetIp")}
-              className="w-40 rounded-md border border-slate-300 px-2 py-1 font-mono text-xs outline-none focus:border-brand"
-            />
-          )}
-          <input
-            value={port}
-            onChange={(e) => setPort(e.target.value)}
-            placeholder={tg.port != null ? String(tg.port) : t("tg.port")}
-            className="w-20 rounded-md border border-slate-300 px-2 py-1 text-xs outline-none focus:border-brand"
-          />
-          <Button
-            variant="secondary"
-            loading={register.isPending}
-            disabled={!targetId.trim()}
-            onClick={() => register.mutate()}
-          >
-            <Plus className="h-3.5 w-3.5" /> {t("tg.register")}
-          </Button>
-        </div>
+              <Plus className="h-3.5 w-3.5" /> {t("tg.register")}
+            </Button>
+          </div>
+        </FormCard>
 
         {health.isLoading ? (
-          <div className="flex justify-center py-6">
-            <Spinner />
-          </div>
+          <TableLoading />
         ) : health.isError ? (
           <p className="text-sm text-red-600">{(health.error as Error).message}</p>
         ) : health.data && health.data.length > 0 ? (
-          <table className="w-full text-left text-sm">
-            <thead className="text-[11px] uppercase text-slate-400">
+          <Table>
+            <Thead sticky={false}>
               <tr>
-                <th className="py-1 pr-4 font-medium">{t("tg.health.target")}</th>
-                <th className="py-1 pr-4 font-medium">{t("tg.health.port")}</th>
-                <th className="py-1 pr-4 font-medium">{t("tg.health.state")}</th>
-                <th className="py-1 pr-4 font-medium">{t("tg.health.reason")}</th>
-                <th className="py-1" />
+                <Th>{t("tg.health.target")}</Th>
+                <Th>{t("tg.health.port")}</Th>
+                <Th>{t("tg.health.state")}</Th>
+                <Th>{t("tg.health.reason")}</Th>
+                <Th />
               </tr>
-            </thead>
+            </Thead>
             <tbody>
               {health.data.map((h: TargetHealthEntry) => (
-                <tr key={`${h.id}:${h.port}`} className="border-t border-slate-100">
-                  <td className="py-1.5 pr-4 font-mono text-xs text-slate-600">{h.id}</td>
-                  <td className="py-1.5 pr-4 text-slate-600">{h.port ?? "—"}</td>
-                  <td className="py-1.5 pr-4">
-                    <span
-                      className={cn(
-                        "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium",
-                        (h.state && HEALTH_STYLES[h.state]) ?? "bg-slate-100 text-slate-500",
-                      )}
-                    >
+                <Tr key={`${h.id}:${h.port}`}>
+                  <Td mono>{h.id}</Td>
+                  <Td>{h.port ?? "—"}</Td>
+                  <Td>
+                    <StatusBadge tone={(h.state && HEALTH_TONES[h.state]) || "neutral"}>
                       {h.state ?? "—"}
-                    </span>
-                  </td>
-                  <td className="py-1.5 pr-4 text-xs text-slate-500">
+                    </StatusBadge>
+                  </Td>
+                  <Td muted>
                     {h.reason ?? ""}
                     {h.description ? ` — ${h.description}` : ""}
-                  </td>
-                  <td className="py-1.5 text-right">
+                  </Td>
+                  <Td className="text-right">
                     <button
                       type="button"
                       title={t("tg.deregister")}
                       onClick={() => deregister.mutate(h)}
-                      className="text-slate-400 hover:text-red-600"
+                      className="rounded p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-red-600"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
-                  </td>
-                </tr>
+                  </Td>
+                </Tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         ) : (
-          <p className="text-sm text-slate-400">{t("tg.noTargets")}</p>
+          <p className="text-sm text-slate-500">{t("tg.noTargets")}</p>
         )}
       </div>
     </ResizableBottomPanel>
@@ -562,17 +564,13 @@ function CreateTgModal({ open, onClose }: { open: boolean; onClose: () => void }
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label={t("tg.col.protocol")}>
-            <select
-              value={protocol}
-              onChange={(e) => setProtocol(e.target.value)}
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand"
-            >
+            <Select value={protocol} onChange={(e) => setProtocol(e.target.value)}>
               {TG_PROTOCOLS.map((p) => (
                 <option key={p} value={p}>
                   {p}
                 </option>
               ))}
-            </select>
+            </Select>
           </Field>
           <Field label={t("tg.port")}>
             <TextInput type="number" value={port} onChange={(e) => setPort(e.target.value)} />
@@ -580,28 +578,23 @@ function CreateTgModal({ open, onClose }: { open: boolean; onClose: () => void }
         </div>
         <div className="grid grid-cols-2 gap-3">
           <Field label={t("tg.col.targetType")}>
-            <select
+            <Select
               value={targetType}
               onChange={(e) => setTargetType(e.target.value as "instance" | "ip")}
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand"
             >
               <option value="instance">instance</option>
               <option value="ip">ip</option>
-            </select>
+            </Select>
           </Field>
           <Field label={t("tg.col.vpc")}>
-            <select
-              value={vpcId}
-              onChange={(e) => setVpcId(e.target.value)}
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand"
-            >
+            <Select value={vpcId} onChange={(e) => setVpcId(e.target.value)}>
               <option value="">{t("sg.defaultVpc")}</option>
               {vpcIds.map((v) => (
                 <option key={v} value={v}>
                   {v}
                 </option>
               ))}
-            </select>
+            </Select>
           </Field>
         </div>
         {protocol.startsWith("HTTP") && (

@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { RefreshCw, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -12,11 +11,12 @@ import type {
 } from "@/lib/types";
 import { cn, formatDate } from "@/lib/utils";
 import { StateBadge, TRANSITIONAL_STATES } from "@/pages/ec2";
+import { DefinitionGrid, KV, PanelHeader, Table, TableLoading, Td, Th, Thead, Tr } from "./kit";
 import { ResizableBottomPanel } from "./resizable-bottom-panel";
 import { SecurityGroupCard } from "./sg-rules";
 import { TagsEditor } from "./tags-editor";
 import { useToast } from "./toast";
-import { Button, Spinner } from "./ui";
+import { Button, FieldLabel, Select, Spinner } from "./ui";
 
 const INSTANCE_TYPES = [
   "t2.micro",
@@ -77,33 +77,21 @@ export function Ec2DetailPanel({
 
   return (
     <ResizableBottomPanel storageKey="oc_panel_h_ec2">
-      <div className="flex items-center gap-2 border-b px-4 py-2">
+      <PanelHeader
+        onRefresh={refresh}
+        refreshing={detail.isFetching}
+        refreshTitle={t("common.refresh")}
+        onClose={onClose}
+        closeTitle={t("common.close")}
+      >
         <span className="font-mono text-xs text-slate-500">{instanceId}</span>
         {detail.data?.name && (
-          <span className="text-sm font-medium text-slate-700">{detail.data.name}</span>
+          <span className="text-sm font-semibold text-slate-900">{detail.data.name}</span>
         )}
         {detail.data && <StateBadge state={detail.data.state} />}
-        <div className="ml-auto flex items-center gap-2">
-          <button
-            type="button"
-            title={t("common.refresh")}
-            onClick={refresh}
-            className="text-slate-400 hover:text-slate-600"
-          >
-            <RefreshCw className={cn("h-4 w-4", detail.isFetching && "animate-spin")} />
-          </button>
-          <button
-            type="button"
-            title={t("common.close")}
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-600"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
+      </PanelHeader>
 
-      <nav className="flex gap-1 border-b px-3">
+      <nav className="flex gap-1 border-b border-slate-200 px-3">
         {TABS.map((tb) => (
           <button
             key={tb}
@@ -111,7 +99,7 @@ export function Ec2DetailPanel({
             onClick={() => setTab(tb)}
             className={cn(
               "relative px-3 py-2 text-sm font-medium",
-              tab === tb ? "text-brand" : "text-slate-500 hover:text-slate-800",
+              tab === tb ? "text-brand" : "text-slate-600 hover:text-slate-900",
             )}
           >
             {t(`ec2.tabs.${tb}`)}
@@ -124,9 +112,7 @@ export function Ec2DetailPanel({
 
       <div className="flex-1 overflow-auto p-4">
         {detail.isLoading ? (
-          <div className="flex justify-center py-8">
-            <Spinner />
-          </div>
+          <TableLoading />
         ) : detail.isError ? (
           <p className="text-sm text-red-600">{(detail.error as Error).message}</p>
         ) : detail.data ? (
@@ -162,19 +148,6 @@ function TabBody({
   }
 }
 
-/* ── Key/value grid ── */
-
-function KV({ label, value, mono }: { label: string; value: string | null; mono?: boolean }) {
-  return (
-    <div>
-      <div className="mb-1 text-[11px] font-medium uppercase text-slate-400">{label}</div>
-      <div className={cn("text-sm text-slate-700", mono && "font-mono text-xs")}>
-        {value || "—"}
-      </div>
-    </div>
-  );
-}
-
 function DetailsTab({ instanceId, detail }: { instanceId: string; detail: Ec2InstanceDetail }) {
   const { t, i18n } = useTranslation();
   const edit = useDetailEdit(instanceId, t("ec2.edit.typeChanged"));
@@ -194,24 +167,17 @@ function DetailsTab({ instanceId, detail }: { instanceId: string; detail: Ec2Ins
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="grid grid-cols-2 gap-x-8 gap-y-4 md:grid-cols-3">
-        <div>
-          <div className="mb-1 text-[11px] font-medium uppercase text-slate-400">
-            {t("ec2.detail.instanceType")}
-          </div>
+      <DefinitionGrid>
+        <KV label={t("ec2.detail.instanceType")}>
           {stopped ? (
             <div className="flex items-center gap-2">
-              <select
-                value={type}
-                onChange={(e) => setType(e.target.value)}
-                className="rounded-md border border-slate-300 px-2 py-1 text-sm outline-none focus:border-brand"
-              >
+              <Select value={type} onChange={(e) => setType(e.target.value)} className="px-2 py-1">
                 {typeOptions.map((it) => (
                   <option key={it} value={it}>
                     {it}
                   </option>
                 ))}
-              </select>
+              </Select>
               <Button
                 variant="secondary"
                 loading={edit.isPending}
@@ -224,10 +190,10 @@ function DetailsTab({ instanceId, detail }: { instanceId: string; detail: Ec2Ins
           ) : (
             <div className="text-sm text-slate-700">
               {detail.instanceType || "—"}
-              <span className="ml-2 text-xs text-slate-400">{t("ec2.edit.typeStoppedHint")}</span>
+              <span className="ml-2 text-xs text-slate-500">{t("ec2.edit.typeStoppedHint")}</span>
             </div>
           )}
-        </div>
+        </KV>
         <KV label={t("ec2.detail.ami")} value={detail.imageId} mono />
         <KV label={t("ec2.detail.keyName")} value={detail.keyName} />
         <KV
@@ -241,7 +207,7 @@ function DetailsTab({ instanceId, detail }: { instanceId: string; detail: Ec2Ins
         <KV label={t("ec2.detail.rootDevice")} value={detail.rootDeviceName} mono />
         <KV label={t("ec2.detail.iamRole")} value={detail.iamInstanceProfileArn} mono />
         <KV label={t("ec2.detail.imdsv2")} value={imdsv2} />
-      </div>
+      </DefinitionGrid>
       <InstanceProtection instanceId={instanceId} />
       <UserDataView instanceId={instanceId} />
     </div>
@@ -269,9 +235,7 @@ function InstanceProtection({ instanceId }: { instanceId: string }) {
 
   return (
     <div>
-      <div className="mb-1 text-[11px] font-medium uppercase text-slate-400">
-        {t("ec2.detail.protection")}
-      </div>
+      <div className="mb-1.5 text-xs font-medium text-slate-500">{t("ec2.detail.protection")}</div>
       <div className="flex flex-wrap gap-4 text-sm text-slate-700">
         <label className="flex items-center gap-2">
           <input
@@ -309,17 +273,15 @@ function UserDataView({ instanceId }: { instanceId: string }) {
   });
   return (
     <div>
-      <div className="mb-1 text-[11px] font-medium uppercase text-slate-400">
-        {t("ec2.detail.userData")}
-      </div>
+      <div className="mb-1.5 text-xs font-medium text-slate-500">{t("ec2.detail.userData")}</div>
       {ud.isLoading ? (
         <Spinner className="h-4 w-4" />
       ) : ud.data ? (
-        <pre className="max-h-32 overflow-auto rounded-md border border-slate-200 bg-slate-50 p-2 font-mono text-[11px] leading-relaxed text-slate-700">
+        <pre className="max-h-32 overflow-auto rounded-md border border-slate-200 bg-slate-50 p-2.5 font-mono text-[11px] leading-relaxed text-slate-700">
           {ud.data}
         </pre>
       ) : (
-        <span className="text-sm text-slate-400">{t("ec2.detail.noUserData")}</span>
+        <span className="text-sm text-slate-500">{t("ec2.detail.noUserData")}</span>
       )}
     </div>
   );
@@ -329,48 +291,42 @@ function NetworkingTab({ detail }: { detail: Ec2InstanceDetail }) {
   const { t } = useTranslation();
   return (
     <div className="flex flex-col gap-5">
-      <div className="grid grid-cols-2 gap-x-8 gap-y-4 md:grid-cols-3">
+      <DefinitionGrid>
         <KV label={t("ec2.detail.vpc")} value={detail.vpcId} mono />
         <KV label={t("ec2.detail.subnet")} value={detail.subnetId} mono />
         <KV label={t("ec2.detail.publicIp")} value={detail.publicIp} mono />
         <KV label={t("ec2.detail.publicDns")} value={detail.publicDns} mono />
         <KV label={t("ec2.detail.privateIp")} value={detail.privateIp} mono />
         <KV label={t("ec2.detail.privateDns")} value={detail.privateDns} mono />
-      </div>
+      </DefinitionGrid>
 
       <div>
-        <div className="mb-2 text-[11px] font-medium uppercase text-slate-400">
+        <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
           {t("ec2.networking.interfaces")}
         </div>
         {detail.networkInterfaces.length === 0 ? (
-          <p className="text-sm text-slate-400">{t("ec2.networking.none")}</p>
+          <p className="text-sm text-slate-500">{t("ec2.networking.none")}</p>
         ) : (
-          <table className="w-full text-left text-sm">
-            <thead className="text-[11px] uppercase text-slate-400">
+          <Table>
+            <Thead sticky={false}>
               <tr>
-                <th className="py-1 pr-4 font-medium">{t("ec2.networking.eni")}</th>
-                <th className="py-1 pr-4 font-medium">{t("ec2.networking.status")}</th>
-                <th className="py-1 pr-4 font-medium">{t("ec2.detail.privateIp")}</th>
-                <th className="py-1 pr-4 font-medium">{t("ec2.networking.mac")}</th>
+                <Th>{t("ec2.networking.eni")}</Th>
+                <Th>{t("ec2.networking.status")}</Th>
+                <Th>{t("ec2.detail.privateIp")}</Th>
+                <Th>{t("ec2.networking.mac")}</Th>
               </tr>
-            </thead>
+            </Thead>
             <tbody>
               {detail.networkInterfaces.map((ni: Ec2NetworkInterface) => (
-                <tr key={ni.networkInterfaceId} className="border-t border-slate-100">
-                  <td className="py-1.5 pr-4 font-mono text-xs text-slate-600">
-                    {ni.networkInterfaceId}
-                  </td>
-                  <td className="py-1.5 pr-4 text-slate-600">{ni.status ?? "—"}</td>
-                  <td className="py-1.5 pr-4 font-mono text-xs text-slate-500">
-                    {ni.privateIp ?? "—"}
-                  </td>
-                  <td className="py-1.5 pr-4 font-mono text-xs text-slate-500">
-                    {ni.macAddress ?? "—"}
-                  </td>
-                </tr>
+                <Tr key={ni.networkInterfaceId}>
+                  <Td mono>{ni.networkInterfaceId}</Td>
+                  <Td>{ni.status ?? "—"}</Td>
+                  <Td mono>{ni.privateIp ?? "—"}</Td>
+                  <Td mono>{ni.macAddress ?? "—"}</Td>
+                </Tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         )}
       </div>
     </div>
@@ -405,28 +361,26 @@ function SecurityTab({ detail, enabled }: { detail: Ec2InstanceDetail; enabled: 
       {/* All attached groups as links into the Security groups page */}
       {detail.securityGroups.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[11px] font-medium uppercase text-slate-400">
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             {t("ec2.security.attached")}
           </span>
           {detail.securityGroups.map((g) => (
             <Link
               key={g.groupId}
               to={`/compute/security-groups/${g.groupId}`}
-              className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2 py-0.5 text-xs hover:border-brand hover:text-brand"
+              className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 px-2 py-1 text-xs transition-colors hover:border-brand hover:bg-brand-fg"
             >
-              <span className="font-medium text-slate-700">{g.groupName || g.groupId}</span>
-              <span className="font-mono text-slate-400">{g.groupId}</span>
+              <span className="font-medium text-slate-800">{g.groupName || g.groupId}</span>
+              <span className="font-mono text-slate-500">{g.groupId}</span>
             </Link>
           ))}
         </div>
       )}
 
       {groupIds.length === 0 ? (
-        <p className="text-sm text-slate-400">{t("ec2.security.none")}</p>
+        <p className="text-sm text-slate-500">{t("ec2.security.none")}</p>
       ) : sgs.isLoading ? (
-        <div className="flex justify-center py-6">
-          <Spinner />
-        </div>
+        <TableLoading />
       ) : sgs.isError ? (
         <p className="text-sm text-red-600">{(sgs.error as Error).message}</p>
       ) : (
@@ -463,17 +417,15 @@ function SgEditor({ instanceId, current }: { instanceId: string; current: string
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-md border border-slate-200 bg-slate-50 p-3">
-      <div className="text-[11px] font-medium uppercase text-slate-400">
-        {t("ec2.edit.changeSg")}
-      </div>
+    <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <FieldLabel>{t("ec2.edit.changeSg")}</FieldLabel>
       <div className="max-h-32 overflow-auto rounded-md border border-slate-300 bg-white p-1.5">
         {(all.data ?? []).map((g) => (
           <label
             key={g.groupId}
             className={cn(
-              "flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-xs hover:bg-slate-50",
-              selected.includes(g.groupId) && "bg-brand-fg",
+              "flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-xs transition-colors hover:bg-slate-50",
+              selected.includes(g.groupId) && "bg-brand-fg hover:bg-brand-tint",
             )}
           >
             <input
@@ -481,12 +433,15 @@ function SgEditor({ instanceId, current }: { instanceId: string; current: string
               checked={selected.includes(g.groupId)}
               onChange={() => toggle(g.groupId)}
             />
-            <span className="font-medium text-slate-700">{g.groupName}</span>
-            <span className="font-mono text-slate-400">{g.groupId}</span>
+            <span className="font-medium text-slate-800">{g.groupName}</span>
+            <span className="font-mono text-slate-500">{g.groupId}</span>
           </label>
         ))}
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-end gap-2">
+        <Button variant="ghost" onClick={() => setOpen(false)}>
+          {t("common.cancel")}
+        </Button>
         <Button
           loading={edit.isPending}
           disabled={selected.length === 0}
@@ -498,9 +453,6 @@ function SgEditor({ instanceId, current }: { instanceId: string; current: string
           }
         >
           {t("common.apply")}
-        </Button>
-        <Button variant="ghost" onClick={() => setOpen(false)}>
-          {t("common.cancel")}
         </Button>
       </div>
     </div>
@@ -515,43 +467,38 @@ function StorageTab({ instanceId, enabled }: { instanceId: string; enabled: bool
     enabled,
   });
 
-  if (volumes.isLoading)
-    return (
-      <div className="flex justify-center py-6">
-        <Spinner />
-      </div>
-    );
+  if (volumes.isLoading) return <TableLoading />;
   if (volumes.isError)
     return <p className="text-sm text-red-600">{(volumes.error as Error).message}</p>;
   if (!volumes.data || volumes.data.length === 0)
-    return <p className="text-sm text-slate-400">{t("ec2.storage.none")}</p>;
+    return <p className="text-sm text-slate-500">{t("ec2.storage.none")}</p>;
 
   return (
-    <table className="w-full text-left text-sm">
-      <thead className="text-[11px] uppercase text-slate-400">
+    <Table>
+      <Thead sticky={false}>
         <tr>
-          <th className="py-1 pr-4 font-medium">{t("ec2.storage.volumeId")}</th>
-          <th className="py-1 pr-4 font-medium">{t("ec2.storage.device")}</th>
-          <th className="py-1 pr-4 font-medium">{t("ec2.storage.size")}</th>
-          <th className="py-1 pr-4 font-medium">{t("ec2.storage.type")}</th>
-          <th className="py-1 pr-4 font-medium">{t("ec2.storage.iops")}</th>
-          <th className="py-1 pr-4 font-medium">{t("ec2.storage.encrypted")}</th>
-          <th className="py-1 font-medium">{t("ec2.storage.state")}</th>
+          <Th>{t("ec2.storage.volumeId")}</Th>
+          <Th>{t("ec2.storage.device")}</Th>
+          <Th>{t("ec2.storage.size")}</Th>
+          <Th>{t("ec2.storage.type")}</Th>
+          <Th>{t("ec2.storage.iops")}</Th>
+          <Th>{t("ec2.storage.encrypted")}</Th>
+          <Th>{t("ec2.storage.state")}</Th>
         </tr>
-      </thead>
+      </Thead>
       <tbody>
         {volumes.data.map((v: Ec2Volume) => (
-          <tr key={v.volumeId} className="border-t border-slate-100">
-            <td className="py-1.5 pr-4 font-mono text-xs text-slate-600">{v.volumeId}</td>
-            <td className="py-1.5 pr-4 font-mono text-xs text-slate-500">{v.deviceName ?? "—"}</td>
-            <td className="py-1.5 pr-4 text-slate-600">{v.size} GiB</td>
-            <td className="py-1.5 pr-4 text-slate-600">{v.volumeType ?? "—"}</td>
-            <td className="py-1.5 pr-4 text-slate-600">{v.iops ?? "—"}</td>
-            <td className="py-1.5 pr-4 text-slate-600">{v.encrypted ? "✓" : "—"}</td>
-            <td className="py-1.5 text-slate-600">{v.state ?? "—"}</td>
-          </tr>
+          <Tr key={v.volumeId}>
+            <Td mono>{v.volumeId}</Td>
+            <Td mono>{v.deviceName ?? "—"}</Td>
+            <Td>{v.size} GiB</Td>
+            <Td>{v.volumeType ?? "—"}</Td>
+            <Td>{v.iops ?? "—"}</Td>
+            <Td>{v.encrypted ? "✓" : "—"}</Td>
+            <Td>{v.state ?? "—"}</Td>
+          </Tr>
         ))}
       </tbody>
-    </table>
+    </Table>
   );
 }

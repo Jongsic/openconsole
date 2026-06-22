@@ -1,11 +1,30 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, RefreshCw, Trash2, TrendingUp, X } from "lucide-react";
+import { Plus, Trash2, TrendingUp } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import {
+  PageHeader,
+  PanelHeader,
+  ResourceTable,
+  SectionTitle,
+  Table,
+  TableLoading,
+  Td,
+  Th,
+  Thead,
+  Tr,
+} from "@/components/kit";
 import { ResizableBottomPanel } from "@/components/resizable-bottom-panel";
-import { ResourceError } from "@/components/resource-error";
 import { useToast } from "@/components/toast";
-import { Button, Field, Modal, Spinner, TextInput } from "@/components/ui";
+import {
+  Button,
+  CONTROL_CLASS,
+  Field,
+  FieldLabel,
+  Modal,
+  Select,
+  TextInput,
+} from "@/components/ui";
 import { api } from "@/lib/autoscaling-api";
 import { api as ec2 } from "@/lib/ec2-api";
 import { api as elbv2 } from "@/lib/elbv2-api";
@@ -36,92 +55,70 @@ export function AsgPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-2 border-b bg-white px-4 py-3">
-        <TrendingUp className="h-5 w-5 text-brand" />
-        <div className="flex-1">
-          <div className="text-sm font-semibold text-slate-800">{t("asg.heading")}</div>
-          <div className="text-[11px] text-slate-400">{t("asg.subtitle")}</div>
-        </div>
-        <Button onClick={() => setCreateOpen(true)}>
-          <Plus className="h-4 w-4" /> {t("asg.create")}
-        </Button>
-        <button
-          type="button"
-          title={t("common.refresh")}
-          onClick={() => qc.invalidateQueries({ queryKey: ["asgs"] })}
-          className="ml-1 text-slate-400 hover:text-slate-600"
-        >
-          <RefreshCw className={cn("h-4 w-4", asgs.isFetching && "animate-spin")} />
-        </button>
-      </div>
+      <PageHeader
+        icon={TrendingUp}
+        title={t("asg.heading")}
+        subtitle={t("asg.subtitle")}
+        onRefresh={() => qc.invalidateQueries({ queryKey: ["asgs"] })}
+        refreshing={asgs.isFetching}
+        refreshTitle={t("common.refresh")}
+        actions={
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus className="h-4 w-4" /> {t("asg.create")}
+          </Button>
+        }
+      />
 
       <div className="flex-1 overflow-auto">
-        {asgs.isLoading ? (
-          <div className="flex justify-center py-16">
-            <Spinner />
-          </div>
-        ) : asgs.isError ? (
-          <ResourceError error={asgs.error} service="Auto Scaling" />
-        ) : asgs.data && asgs.data.length > 0 ? (
-          <table className="w-full text-left text-sm">
-            <thead className="sticky top-0 bg-slate-50 text-[11px] uppercase text-slate-400">
-              <tr>
-                <th className="px-4 py-2 font-medium">{t("asg.col.name")}</th>
-                <th className="px-4 py-2 font-medium">{t("asg.col.capacity")}</th>
-                <th className="px-4 py-2 font-medium">{t("asg.col.instances")}</th>
-                <th className="px-4 py-2 font-medium">{t("asg.col.healthCheck")}</th>
-                <th className="px-4 py-2 font-medium">{t("asg.col.launchTemplate")}</th>
-                <th className="px-4 py-2 font-medium">{t("asg.col.azs")}</th>
-                <th className="px-4 py-2" />
-              </tr>
-            </thead>
-            <tbody>
-              {asgs.data.map((g: AsgSummary) => (
-                <tr
-                  key={g.name}
-                  onClick={() => setSelected(g.name)}
-                  className={cn(
-                    "cursor-pointer border-b border-slate-100 hover:bg-slate-50",
-                    selected === g.name && "bg-brand-fg hover:bg-brand-fg",
-                  )}
+        <ResourceTable
+          isLoading={asgs.isLoading}
+          isError={asgs.isError}
+          error={asgs.error}
+          service="Auto Scaling"
+          data={asgs.data}
+          getKey={(g) => g.name}
+          empty={{ icon: TrendingUp, message: t("asg.none") }}
+          head={
+            <tr>
+              <Th>{t("asg.col.name")}</Th>
+              <Th>{t("asg.col.capacity")}</Th>
+              <Th>{t("asg.col.instances")}</Th>
+              <Th>{t("asg.col.healthCheck")}</Th>
+              <Th>{t("asg.col.launchTemplate")}</Th>
+              <Th>{t("asg.col.azs")}</Th>
+              <Th />
+            </tr>
+          }
+          row={(g: AsgSummary) => (
+            <Tr key={g.name} onClick={() => setSelected(g.name)} selected={selected === g.name}>
+              <Td className="font-medium text-slate-700">{g.name}</Td>
+              <Td>
+                {t("asg.capacityFmt", {
+                  min: g.minSize,
+                  desired: g.desiredCapacity,
+                  max: g.maxSize,
+                })}
+              </Td>
+              <Td>{g.instanceCount}</Td>
+              <Td>{g.healthCheckType ?? "—"}</Td>
+              <Td>{g.launchTemplate ?? "—"}</Td>
+              <Td muted>{g.availabilityZones.join(", ") || "—"}</Td>
+              <Td className="text-right">
+                <button
+                  type="button"
+                  title={t("common.delete")}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDeleteTarget(g.name);
+                  }}
+                  className="rounded p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-red-600"
                 >
-                  <td className="px-4 py-2 font-medium text-slate-700">{g.name}</td>
-                  <td className="px-4 py-2 text-slate-600">
-                    {t("asg.capacityFmt", {
-                      min: g.minSize,
-                      desired: g.desiredCapacity,
-                      max: g.maxSize,
-                    })}
-                  </td>
-                  <td className="px-4 py-2 text-slate-600">{g.instanceCount}</td>
-                  <td className="px-4 py-2 text-slate-600">{g.healthCheckType ?? "—"}</td>
-                  <td className="px-4 py-2 text-slate-600">{g.launchTemplate ?? "—"}</td>
-                  <td className="px-4 py-2 text-xs text-slate-500">
-                    {g.availabilityZones.join(", ") || "—"}
-                  </td>
-                  <td className="px-4 py-2 text-right">
-                    <button
-                      type="button"
-                      title={t("common.delete")}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeleteTarget(g.name);
-                      }}
-                      className="text-slate-400 hover:text-red-600"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <div className="flex flex-col items-center justify-center gap-3 py-16 text-slate-400">
-            <TrendingUp className="h-10 w-10" />
-            <p className="text-sm">{t("asg.none")}</p>
-          </div>
-        )}
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </Td>
+            </Tr>
+          )}
+        />
       </div>
 
       {current && (
@@ -211,18 +208,14 @@ function CreateAsgModal({ open, onClose }: { open: boolean; onClose: () => void 
           <TextInput value={name} onChange={(e) => setName(e.target.value)} autoComplete="off" />
         </Field>
         <Field label={t("asg.col.launchTemplate")}>
-          <select
-            value={launchTemplateId}
-            onChange={(e) => setLaunchTemplateId(e.target.value)}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand"
-          >
+          <Select value={launchTemplateId} onChange={(e) => setLaunchTemplateId(e.target.value)}>
             <option value="">{t("asg.pickTemplate")}</option>
             {(templates.data ?? []).map((lt) => (
               <option key={lt.launchTemplateId} value={lt.launchTemplateId}>
                 {lt.launchTemplateName} ({lt.launchTemplateId})
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
         <div className="grid grid-cols-3 gap-3">
           <Field label={t("asg.min")}>
@@ -256,8 +249,8 @@ function CreateAsgModal({ open, onClose }: { open: boolean; onClose: () => void 
               <label
                 key={s.subnetId}
                 className={cn(
-                  "flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-xs hover:bg-slate-50",
-                  subnetIds.includes(s.subnetId) && "bg-brand-fg",
+                  "flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-xs transition-colors hover:bg-slate-50",
+                  subnetIds.includes(s.subnetId) && "bg-brand-fg hover:bg-brand-tint",
                 )}
               >
                 <input
@@ -265,8 +258,8 @@ function CreateAsgModal({ open, onClose }: { open: boolean; onClose: () => void 
                   checked={subnetIds.includes(s.subnetId)}
                   onChange={() => toggle(setSubnetIds, s.subnetId)}
                 />
-                <span className="font-mono text-slate-600">{s.subnetId}</span>
-                <span className="text-slate-400">{s.availabilityZone}</span>
+                <span className="font-mono text-slate-700">{s.subnetId}</span>
+                <span className="text-slate-500">{s.availabilityZone}</span>
               </label>
             ))}
           </div>
@@ -278,8 +271,8 @@ function CreateAsgModal({ open, onClose }: { open: boolean; onClose: () => void 
                 <label
                   key={tg.arn}
                   className={cn(
-                    "flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-xs hover:bg-slate-50",
-                    targetGroupArns.includes(tg.arn) && "bg-brand-fg",
+                    "flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-xs transition-colors hover:bg-slate-50",
+                    targetGroupArns.includes(tg.arn) && "bg-brand-fg hover:bg-brand-tint",
                   )}
                 >
                   <input
@@ -287,7 +280,7 @@ function CreateAsgModal({ open, onClose }: { open: boolean; onClose: () => void 
                     checked={targetGroupArns.includes(tg.arn)}
                     onChange={() => toggle(setTargetGroupArns, tg.arn)}
                   />
-                  <span className="font-medium text-slate-700">{tg.name}</span>
+                  <span className="font-medium text-slate-800">{tg.name}</span>
                 </label>
               ))}
             </div>
@@ -307,14 +300,6 @@ function CreateAsgModal({ open, onClose }: { open: boolean; onClose: () => void 
         </div>
       </div>
     </Modal>
-  );
-}
-
-function SectionTitle({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-      {children}
-    </div>
   );
 }
 
@@ -346,15 +331,14 @@ function CapacityEditor({
     onError: (e) => toast.error((e as Error).message),
   });
 
-  const inputCls =
-    "w-16 rounded-md border border-slate-300 px-2 py-1 text-xs outline-none focus:border-brand";
+  const inputCls = cn(CONTROL_CLASS, "w-20 py-1.5");
 
   return (
-    <div>
+    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
       <SectionTitle>{t("asg.section.capacity")}</SectionTitle>
-      <div className="flex items-end gap-2 text-xs text-slate-500">
-        <label className="flex flex-col gap-1">
-          {t("asg.min")}
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="flex flex-col gap-1.5">
+          <FieldLabel>{t("asg.min")}</FieldLabel>
           <input
             type="number"
             min={0}
@@ -363,8 +347,8 @@ function CapacityEditor({
             className={inputCls}
           />
         </label>
-        <label className="flex flex-col gap-1">
-          {t("asg.desired")}
+        <label className="flex flex-col gap-1.5">
+          <FieldLabel>{t("asg.desired")}</FieldLabel>
           <input
             type="number"
             min={0}
@@ -373,8 +357,8 @@ function CapacityEditor({
             className={inputCls}
           />
         </label>
-        <label className="flex flex-col gap-1">
-          {t("asg.max")}
+        <label className="flex flex-col gap-1.5">
+          <FieldLabel>{t("asg.max")}</FieldLabel>
           <input
             type="number"
             min={0}
@@ -400,22 +384,12 @@ function AsgDetailPanel({ name, onClose }: { name: string; onClose: () => void }
 
   return (
     <ResizableBottomPanel storageKey="oc_panel_h_asg">
-      <div className="flex items-center gap-2 border-b px-4 py-2">
-        <span className="text-sm font-medium text-slate-700">{name}</span>
-        <button
-          type="button"
-          title={t("common.close")}
-          onClick={onClose}
-          className="ml-auto text-slate-400 hover:text-slate-600"
-        >
-          <X className="h-4 w-4" />
-        </button>
-      </div>
+      <PanelHeader onClose={onClose} closeTitle={t("common.close")}>
+        <span className="text-sm font-semibold text-slate-900">{name}</span>
+      </PanelHeader>
       <div className="flex-1 overflow-auto p-4">
         {detail.isLoading ? (
-          <div className="flex justify-center py-8">
-            <Spinner />
-          </div>
+          <TableLoading />
         ) : detail.isError ? (
           <p className="text-sm text-red-600">{(detail.error as Error).message}</p>
         ) : detail.data ? (
@@ -429,92 +403,88 @@ function AsgDetailPanel({ name, onClose }: { name: string; onClose: () => void }
             <div>
               <SectionTitle>{t("asg.section.instances")}</SectionTitle>
               {detail.data.instances.length === 0 ? (
-                <p className="text-sm text-slate-400">{t("asg.noInstances")}</p>
+                <p className="text-sm text-slate-500">{t("asg.noInstances")}</p>
               ) : (
-                <table className="w-full text-left text-xs">
-                  <thead className="text-[10px] uppercase text-slate-400">
+                <Table>
+                  <Thead sticky={false}>
                     <tr>
-                      <th className="py-1 pr-4 font-medium">{t("asg.inst.id")}</th>
-                      <th className="py-1 pr-4 font-medium">{t("asg.inst.lifecycle")}</th>
-                      <th className="py-1 pr-4 font-medium">{t("asg.inst.health")}</th>
-                      <th className="py-1 font-medium">{t("asg.inst.az")}</th>
+                      <Th>{t("asg.inst.id")}</Th>
+                      <Th>{t("asg.inst.lifecycle")}</Th>
+                      <Th>{t("asg.inst.health")}</Th>
+                      <Th>{t("asg.inst.az")}</Th>
                     </tr>
-                  </thead>
+                  </Thead>
                   <tbody>
                     {detail.data.instances.map((i) => (
-                      <tr key={i.instanceId} className="border-t border-slate-100">
-                        <td className="py-1 pr-4 font-mono text-slate-600">{i.instanceId}</td>
-                        <td className="py-1 pr-4 text-slate-600">{i.lifecycleState ?? "—"}</td>
-                        <td className="py-1 pr-4 text-slate-600">{i.healthStatus ?? "—"}</td>
-                        <td className="py-1 text-slate-600">{i.availabilityZone ?? "—"}</td>
-                      </tr>
+                      <Tr key={i.instanceId}>
+                        <Td mono>{i.instanceId}</Td>
+                        <Td>{i.lifecycleState ?? "—"}</Td>
+                        <Td>{i.healthStatus ?? "—"}</Td>
+                        <Td>{i.availabilityZone ?? "—"}</Td>
+                      </Tr>
                     ))}
                   </tbody>
-                </table>
+                </Table>
               )}
             </div>
 
             <div>
               <SectionTitle>{t("asg.section.policies")}</SectionTitle>
               {detail.data.policies.length === 0 ? (
-                <p className="text-sm text-slate-400">{t("asg.noPolicies")}</p>
+                <p className="text-sm text-slate-500">{t("asg.noPolicies")}</p>
               ) : (
-                <table className="w-full text-left text-xs">
-                  <thead className="text-[10px] uppercase text-slate-400">
+                <Table>
+                  <Thead sticky={false}>
                     <tr>
-                      <th className="py-1 pr-4 font-medium">{t("asg.pol.name")}</th>
-                      <th className="py-1 pr-4 font-medium">{t("asg.pol.type")}</th>
-                      <th className="py-1 pr-4 font-medium">{t("asg.pol.metric")}</th>
-                      <th className="py-1 font-medium">{t("asg.pol.target")}</th>
+                      <Th>{t("asg.pol.name")}</Th>
+                      <Th>{t("asg.pol.type")}</Th>
+                      <Th>{t("asg.pol.metric")}</Th>
+                      <Th>{t("asg.pol.target")}</Th>
                     </tr>
-                  </thead>
+                  </Thead>
                   <tbody>
                     {detail.data.policies.map((p) => (
-                      <tr key={p.name} className="border-t border-slate-100">
-                        <td className="py-1 pr-4 text-slate-600">{p.name}</td>
-                        <td className="py-1 pr-4 text-slate-600">{p.type ?? "—"}</td>
-                        <td className="py-1 pr-4 text-slate-600">{p.metric ?? "—"}</td>
-                        <td className="py-1 text-slate-600">{p.targetValue ?? "—"}</td>
-                      </tr>
+                      <Tr key={p.name}>
+                        <Td>{p.name}</Td>
+                        <Td>{p.type ?? "—"}</Td>
+                        <Td>{p.metric ?? "—"}</Td>
+                        <Td>{p.targetValue ?? "—"}</Td>
+                      </Tr>
                     ))}
                   </tbody>
-                </table>
+                </Table>
               )}
             </div>
 
             <div>
               <SectionTitle>{t("asg.section.scheduled")}</SectionTitle>
               {detail.data.scheduledActions.length === 0 ? (
-                <p className="text-sm text-slate-400">{t("asg.noScheduled")}</p>
+                <p className="text-sm text-slate-500">{t("asg.noScheduled")}</p>
               ) : (
-                <table className="w-full text-left text-xs">
-                  <thead className="text-[10px] uppercase text-slate-400">
+                <Table>
+                  <Thead sticky={false}>
                     <tr>
-                      <th className="py-1 pr-4 font-medium">{t("asg.sched.name")}</th>
-                      <th className="py-1 pr-4 font-medium">{t("asg.sched.recurrence")}</th>
-                      <th className="py-1 pr-4 font-medium">{t("asg.sched.capacity")}</th>
-                      <th className="py-1 font-medium">{t("asg.sched.start")}</th>
+                      <Th>{t("asg.sched.name")}</Th>
+                      <Th>{t("asg.sched.recurrence")}</Th>
+                      <Th>{t("asg.sched.capacity")}</Th>
+                      <Th>{t("asg.sched.start")}</Th>
                     </tr>
-                  </thead>
+                  </Thead>
                   <tbody>
                     {detail.data.scheduledActions.map((s) => (
-                      <tr key={s.name} className="border-t border-slate-100">
-                        <td className="py-1 pr-4 text-slate-600">{s.name}</td>
-                        <td className="py-1 pr-4 font-mono text-slate-500">
-                          {s.recurrence ?? "—"}
-                        </td>
-                        <td className="py-1 pr-4 text-slate-600">
+                      <Tr key={s.name}>
+                        <Td>{s.name}</Td>
+                        <Td mono>{s.recurrence ?? "—"}</Td>
+                        <Td>
                           {[s.minSize, s.desiredCapacity, s.maxSize]
                             .map((n) => (n == null ? "—" : n))
                             .join(" / ")}
-                        </td>
-                        <td className="py-1 text-slate-600">
-                          {formatDate(s.startTime, i18n.language)}
-                        </td>
-                      </tr>
+                        </Td>
+                        <Td muted>{formatDate(s.startTime, i18n.language)}</Td>
+                      </Tr>
                     ))}
                   </tbody>
-                </table>
+                </Table>
               )}
             </div>
           </div>

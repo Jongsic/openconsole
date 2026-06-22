@@ -1,13 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { KeyRound, Plus, RefreshCw, Trash2, Upload } from "lucide-react";
+import { KeyRound, Plus, Trash2, Upload } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ResourceError } from "@/components/resource-error";
+import { PageHeader, ResourceTable, Td, Th, Tr } from "@/components/kit";
 import { useToast } from "@/components/toast";
-import { Button, Field, Modal, Spinner, TextInput } from "@/components/ui";
+import { Button, Field, Modal, Select, Textarea, TextInput } from "@/components/ui";
 import { api } from "@/lib/ec2-api";
 import type { Ec2KeyPairSummary } from "@/lib/types";
-import { cn, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 
 export function KeyPairsPage() {
   const { t, i18n } = useTranslation();
@@ -31,81 +31,64 @@ export function KeyPairsPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-2 border-b bg-white px-4 py-3">
-        <KeyRound className="h-5 w-5 text-brand" />
-        <div className="flex-1">
-          <div className="text-sm font-semibold text-slate-800">{t("kp.heading")}</div>
-          <div className="text-[11px] text-slate-400">{t("kp.subtitle")}</div>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <Button variant="secondary" onClick={() => setImportOpen(true)}>
-            <Upload className="h-4 w-4" /> {t("kp.import")}
-          </Button>
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus className="h-4 w-4" /> {t("kp.create")}
-          </Button>
-          <button
-            type="button"
-            title={t("common.refresh")}
-            onClick={() => qc.invalidateQueries({ queryKey: ["key-pairs"] })}
-            className="ml-1 text-slate-400 hover:text-slate-600"
-          >
-            <RefreshCw className={cn("h-4 w-4", keys.isFetching && "animate-spin")} />
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        icon={KeyRound}
+        title={t("kp.heading")}
+        subtitle={t("kp.subtitle")}
+        onRefresh={() => qc.invalidateQueries({ queryKey: ["key-pairs"] })}
+        refreshing={keys.isFetching}
+        refreshTitle={t("common.refresh")}
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => setImportOpen(true)}>
+              <Upload className="h-4 w-4" /> {t("kp.import")}
+            </Button>
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus className="h-4 w-4" /> {t("kp.create")}
+            </Button>
+          </>
+        }
+      />
 
       <div className="flex-1 overflow-auto">
-        {keys.isLoading ? (
-          <div className="flex justify-center py-16">
-            <Spinner />
-          </div>
-        ) : keys.isError ? (
-          <ResourceError error={keys.error} service="EC2 key pairs" />
-        ) : keys.data && keys.data.length > 0 ? (
-          <table className="w-full text-left text-sm">
-            <thead className="sticky top-0 bg-slate-50 text-[11px] uppercase text-slate-400">
-              <tr>
-                <th className="px-4 py-2 font-medium">{t("kp.col.name")}</th>
-                <th className="px-4 py-2 font-medium">{t("kp.col.id")}</th>
-                <th className="px-4 py-2 font-medium">{t("kp.col.type")}</th>
-                <th className="px-4 py-2 font-medium">{t("kp.col.fingerprint")}</th>
-                <th className="px-4 py-2 font-medium">{t("kp.col.created")}</th>
-                <th className="px-4 py-2" />
-              </tr>
-            </thead>
-            <tbody>
-              {keys.data.map((k: Ec2KeyPairSummary) => (
-                <tr key={k.keyPairId || k.keyName} className="group border-b border-slate-100">
-                  <td className="px-4 py-2 font-medium text-slate-700">{k.keyName}</td>
-                  <td className="px-4 py-2 font-mono text-xs text-slate-500">{k.keyPairId}</td>
-                  <td className="px-4 py-2 text-slate-600">{k.keyType ?? "—"}</td>
-                  <td className="px-4 py-2 font-mono text-[11px] text-slate-500">
-                    {k.fingerprint ?? "—"}
-                  </td>
-                  <td className="px-4 py-2 text-xs text-slate-500">
-                    {formatDate(k.createTime, i18n.language)}
-                  </td>
-                  <td className="px-4 py-2 text-right">
-                    <button
-                      type="button"
-                      title={t("common.delete")}
-                      onClick={() => setDeleteTarget(k.keyName)}
-                      className="text-slate-400 hover:text-red-600"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <div className="flex flex-col items-center justify-center gap-3 py-16 text-slate-400">
-            <KeyRound className="h-10 w-10" />
-            <p className="text-sm">{t("kp.none")}</p>
-          </div>
-        )}
+        <ResourceTable
+          isLoading={keys.isLoading}
+          isError={keys.isError}
+          error={keys.error}
+          service="EC2 key pairs"
+          data={keys.data}
+          getKey={(k) => k.keyPairId || k.keyName}
+          empty={{ icon: KeyRound, message: t("kp.none") }}
+          head={
+            <tr>
+              <Th>{t("kp.col.name")}</Th>
+              <Th>{t("kp.col.id")}</Th>
+              <Th>{t("kp.col.type")}</Th>
+              <Th>{t("kp.col.fingerprint")}</Th>
+              <Th>{t("kp.col.created")}</Th>
+              <Th />
+            </tr>
+          }
+          row={(k: Ec2KeyPairSummary) => (
+            <Tr key={k.keyPairId || k.keyName}>
+              <Td className="font-medium text-slate-700">{k.keyName}</Td>
+              <Td mono>{k.keyPairId}</Td>
+              <Td>{k.keyType ?? "—"}</Td>
+              <Td className="font-mono text-[11px] text-slate-500">{k.fingerprint ?? "—"}</Td>
+              <Td muted>{formatDate(k.createTime, i18n.language)}</Td>
+              <Td className="text-right">
+                <button
+                  type="button"
+                  title={t("common.delete")}
+                  onClick={() => setDeleteTarget(k.keyName)}
+                  className="rounded p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-red-600"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </Td>
+            </Tr>
+          )}
+        />
       </div>
 
       <CreateKeyPairModal open={createOpen} onClose={() => setCreateOpen(false)} />
@@ -178,14 +161,10 @@ function CreateKeyPairModal({ open, onClose }: { open: boolean; onClose: () => v
           />
         </Field>
         <Field label={t("kp.type")}>
-          <select
-            value={keyType}
-            onChange={(e) => setKeyType(e.target.value as "rsa" | "ed25519")}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand"
-          >
+          <Select value={keyType} onChange={(e) => setKeyType(e.target.value as "rsa" | "ed25519")}>
             <option value="rsa">RSA</option>
             <option value="ed25519">ED25519</option>
-          </select>
+          </Select>
         </Field>
         <p className="text-xs text-amber-600">{t("kp.downloadNote")}</p>
         <div className="flex justify-end gap-2">
@@ -236,12 +215,12 @@ function ImportKeyPairModal({ open, onClose }: { open: boolean; onClose: () => v
           />
         </Field>
         <Field label={t("kp.publicKey")}>
-          <textarea
+          <Textarea
             value={publicKey}
             onChange={(e) => setPublicKey(e.target.value)}
             spellCheck={false}
             placeholder="ssh-ed25519 AAAA... user@host"
-            className="h-28 w-full resize-none rounded-md border border-slate-300 p-2 font-mono text-xs outline-none focus:border-brand"
+            className="h-28 w-full p-2 font-mono text-xs"
           />
         </Field>
         <p className="text-xs text-slate-400">{t("kp.importNote")}</p>

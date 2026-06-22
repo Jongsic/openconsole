@@ -23,7 +23,7 @@ function ErrorFallback({ error, info }: { error: Error; info: ErrorInfo | null }
         </div>
 
         <div>
-          <div className="mb-1 text-xs font-medium uppercase text-slate-400">
+          <div className="mb-1 text-xs font-medium uppercase text-slate-500">
             {t("errorPage.details")}
           </div>
           <pre className="max-h-[50vh] overflow-auto rounded-md border border-slate-200 bg-slate-50 p-3 font-mono text-[11px] leading-relaxed text-slate-700">

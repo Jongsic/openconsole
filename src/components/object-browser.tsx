@@ -161,7 +161,7 @@ export function ObjectBrowser({ bucket }: { bucket: string }) {
           </div>
         ) : (
           <table className="w-full text-sm">
-            <thead className="sticky top-0 bg-slate-50 text-left text-xs uppercase text-slate-400">
+            <thead className="sticky top-0 bg-slate-50 text-left text-xs uppercase text-slate-500">
               <tr>
                 <th className="px-4 py-2 font-medium">{t("common.name")}</th>
                 <th className="w-28 px-4 py-2 font-medium">{t("common.size")}</th>

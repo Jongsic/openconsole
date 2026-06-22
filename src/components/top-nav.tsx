@@ -24,10 +24,10 @@ export function TopNav() {
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
-    <header className="flex items-center gap-4 border-b bg-white px-4">
+    <header className="flex items-center gap-4 border-b border-slate-200 bg-white px-4">
       <Link to="/s3" className="flex items-center gap-2 py-2.5">
         <Boxes className="h-6 w-6 text-brand" />
-        <span className="text-sm font-semibold text-slate-800">OpenConsole</span>
+        <span className="text-sm font-semibold text-slate-900">OpenConsole</span>
       </Link>
 
       <nav className="flex items-center gap-1">
@@ -56,7 +56,7 @@ export function TopNav() {
             >
               {tab.label}
               {tab.comingSoon && (
-                <span className="rounded bg-slate-100 px-1 py-0.5 text-[10px] text-slate-400">
+                <span className="rounded bg-slate-100 px-1 py-0.5 text-[10px] font-medium text-slate-500">
                   {t("nav.comingSoon")}
                 </span>
               )}
@@ -74,7 +74,7 @@ export function TopNav() {
           type="button"
           title={t("common.settings")}
           onClick={() => setSettingsOpen(true)}
-          className="flex items-center gap-1.5 rounded-md border border-slate-200 px-2 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+          className="flex items-center gap-1.5 rounded-md border border-slate-200 px-2 py-1.5 text-xs font-medium text-slate-600 shadow-sm transition-colors hover:bg-slate-50"
         >
           <Settings className="h-4 w-4" />
           {t(`backend.${backend}`)}

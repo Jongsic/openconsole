@@ -73,7 +73,7 @@ export function BucketPropertiesModal({
     >
       {bucket && (
         <div className="mb-4 flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-          <span className="text-xs font-medium uppercase text-slate-400">{t("props.arn")}</span>
+          <span className="text-xs font-medium uppercase text-slate-500">{t("props.arn")}</span>
           <code className="flex-1 truncate font-mono text-xs text-slate-700">{arn}</code>
           <CopyButton text={arn} />
         </div>
@@ -155,7 +155,7 @@ function useSave(bucket: string) {
 }
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
-  return <div className="mb-1.5 text-xs font-medium uppercase text-slate-400">{children}</div>;
+  return <div className="mb-1.5 text-xs font-medium uppercase text-slate-500">{children}</div>;
 }
 
 function VersioningEditor({ bucket, current }: { bucket: string; current: VersioningStatus }) {

@@ -29,8 +29,8 @@ export function SectionLayout({
 
   return (
     <div className="flex h-full">
-      <aside className="flex h-full w-56 shrink-0 flex-col border-r bg-white">
-        <div className="flex items-center gap-2 border-b px-4 py-3">
+      <aside className="flex h-full w-56 shrink-0 flex-col border-r border-slate-200 bg-white">
+        <div className="flex items-center gap-2 border-b border-slate-200 px-4 py-3">
           <TitleIcon className="h-5 w-5 text-brand" />
           <span className="text-sm font-semibold text-slate-800">{t(titleKey)}</span>
         </div>
@@ -42,7 +42,7 @@ export function SectionLayout({
               return (
                 <li key={item.path}>
                   {showHeader && (
-                    <div className="px-3 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                    <div className="px-3 pb-1 pt-4 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
                       {t(item.group as string)}
                     </div>
                   )}
@@ -50,17 +50,17 @@ export function SectionLayout({
                     to={item.path}
                     className={({ isActive }) =>
                       cn(
-                        "flex items-center gap-2 rounded-md px-3 py-2 text-sm",
+                        "flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
                         isActive
-                          ? "bg-brand-fg font-medium text-brand"
-                          : "text-slate-700 hover:bg-slate-100",
+                          ? "bg-brand-fg font-semibold text-brand shadow-[inset_2px_0_0_0_theme(colors.brand.DEFAULT)]"
+                          : "text-slate-700 hover:bg-slate-100 hover:text-slate-900",
                       )
                     }
                   >
-                    <item.icon className="h-4 w-4 shrink-0 opacity-70" />
+                    <item.icon className="h-4 w-4 shrink-0" />
                     <span className="flex-1 truncate">{t(item.labelKey)}</span>
                     {item.comingSoon && (
-                      <span className="rounded bg-slate-100 px-1 py-0.5 text-[10px] text-slate-400">
+                      <span className="rounded bg-slate-100 px-1 py-0.5 text-[10px] font-medium text-slate-500">
                         {t("nav.comingSoon")}
                       </span>
                     )}

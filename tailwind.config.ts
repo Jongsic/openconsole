@@ -7,7 +7,10 @@ const config: Config = {
       colors: {
         brand: {
           DEFAULT: "#6c2bd9",
-          fg: "#f5f0ff",
+          /** Subtle brand wash for selected/active surfaces. */
+          fg: "#f3eeff",
+          /** Slightly deeper wash for hover on selected surfaces. */
+          tint: "#ebe3fd",
         },
       },
     },

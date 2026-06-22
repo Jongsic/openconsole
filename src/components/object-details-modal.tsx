@@ -109,7 +109,7 @@ export function ObjectDetailsModal({
 
           {/* User metadata */}
           <div>
-            <div className="mb-1.5 text-xs font-medium uppercase text-slate-400">
+            <div className="mb-1.5 text-xs font-medium uppercase text-slate-500">
               {t("details.metadata")}
             </div>
             {Object.keys(details.data.metadata).length === 0 ? (
@@ -121,7 +121,7 @@ export function ObjectDetailsModal({
 
           {/* Tags */}
           <div>
-            <div className="mb-1.5 text-xs font-medium uppercase text-slate-400">
+            <div className="mb-1.5 text-xs font-medium uppercase text-slate-500">
               {t("details.tags")}
             </div>
             {details.data.tags.length === 0 ? (
@@ -139,7 +139,7 @@ export function ObjectDetailsModal({
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="grid grid-cols-[140px_1fr] items-start gap-2">
-      <span className="text-xs font-medium uppercase text-slate-400">{label}</span>
+      <span className="text-xs font-medium uppercase text-slate-500">{label}</span>
       <div className="min-w-0">{children}</div>
     </div>
   );
