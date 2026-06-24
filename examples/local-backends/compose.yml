@@ -12,12 +12,12 @@
 #
 #   FLOCI_PORT=4567 docker compose --profile floci up -d
 #
-# ⚠️  Floci and LocalStack default to the same host port 4566 — run only ONE at a time,
-#     or override one with FLOCI_PORT / LOCALSTACK_PORT.
+# ⚠️  Floci and LocalStack both default to host port 4566. To run them together, give
+#     one a different port:  LOCALSTACK_PORT=4567 docker compose --profile localstack up -d
 #
-# The OpenConsole dev server origin (http://localhost:3939) is pre-allowed for CORS,
-# so the app can talk to these backends directly from the browser. If you serve the
-# app from a different origin, update the *_CORS_* values below.
+# CORS is fully open on every backend below (all origins allowed), so the app can talk
+# to them from the browser no matter what origin you serve it from. This is convenient
+# for local dev only — do NOT copy these wide-open CORS settings to anything exposed.
 #
 # Stop / clean up:
 #   docker compose --profile <name> down            # stop
@@ -35,9 +35,11 @@ services:
     ports:
       - "${FLOCI_PORT:-4566}:4566"
     environment:
-      # Canonical Quarkus config key. (The docs mention an EXTRA_CORS_ALLOWED_ORIGINS alias, but
-      # only this FLOCI_SECURITY_* form is bound by @ConfigMapping and actually enables CORS.)
-      FLOCI_SECURITY_EXTRA_CORS_ALLOWED_ORIGINS: "http://localhost:3939"
+      # floci's CORS filter: "*" or a comma-separated list of exact origins (no regex).
+      FLOCI_SECURITY_EXTRA_CORS_ALLOWED_ORIGINS: "*"
+      # Lets an HTTPS-hosted UI reach this loopback floci (Chrome Private Network Access).
+      # No-op on current images — takes effect once floci-io/floci#1530 is merged & released.
+      FLOCI_SECURITY_CORS_ALLOW_PRIVATE_NETWORK: "true"
       FLOCI_SERVICES_DOCKER_NETWORK: openconsole-backends_default
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -45,13 +47,16 @@ services:
 
   # LocalStack — community edition. EC2/S3/etc. work; ELB/ASG are Pro-only and will
   # surface as "not supported" in the UI.
+  # Pin the major tag: "latest" can resolve to a Pro-gated image that exits demanding
+  # a license, whereas "localstack/localstack:4" is the free community line.
   localstack:
-    image: localstack/localstack:latest
+    image: localstack/localstack:4
     profiles: ["localstack"]
     ports:
       - "${LOCALSTACK_PORT:-4566}:4566"
     environment:
-      EXTRA_CORS_ALLOWED_ORIGINS: "http://localhost:3939"
+      # Turn off CORS enforcement entirely (dedicated LocalStack off-switch).
+      DISABLE_CORS_CHECKS: "1"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
 
@@ -66,7 +71,7 @@ services:
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
-      MINIO_API_CORS_ALLOW_ORIGIN: "http://localhost:3939"
+      MINIO_API_CORS_ALLOW_ORIGIN: "*"
     volumes:
       - minio-data:/data
 

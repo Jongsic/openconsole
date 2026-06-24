@@ -97,11 +97,39 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Build metadata
+        id: meta
+        run: echo "created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
       - uses: docker/build-push-action@v7
         with:
           context: .
           push: true
           tags: ${{ steps.tags.outputs.tags }}
+          # dist is arch-neutral and built once on the native runner (see Dockerfile's
+          # --platform=$BUILDPLATFORM), so amd64+arm64 costs ~one extra nginx-base pull.
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            VERSION=${{ github.ref_name }}
+            REVISION=${{ github.sha }}
+            CREATED=${{ steps.meta.outputs.created }}
+          # No SLSA provenance/SBOM attestations: they wrap the image in an OCI
+          # index whose attestation manifest shows up as an untagged GHCR version
+          # on every build. Not worth it for a static nginx site.
+          provenance: false
+          sbom: false
+
+      # A multi-arch tag is a manifest list whose per-platform child manifests are
+      # themselves untagged. A naive "delete every untagged version" would delete
+      # those children and corrupt the live tag, so use a manifest-list-aware cleaner:
+      # it prunes only untagged versions NOT referenced by any tagged manifest list
+      # (i.e. the orphans left when "latest" is retagged).
+      - name: Prune untagged GHCR versions
+        uses: dataaxiom/ghcr-cleanup-action@v1
+        with:
+          package: openconsole
+          delete-untagged: true
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       # Docker Hub doesn't sync from GitHub — push the README as the repo overview.
       # The token must be a Docker Hub PAT with write access to the repository.

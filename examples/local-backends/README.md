@@ -28,8 +28,9 @@ docker compose --profile moto       up -d   # moto_server
 > FLOCI_PORT=4567 docker compose --profile floci up -d
 > ```
 
-CORS for the dev server origin (`http://localhost:3939`) is pre-allowed so the browser app can call
-these directly. Serving the app from another origin? Update the `*_CORS_*` values in `compose.yml`.
+CORS is fully open (all origins allowed) on every backend, so the browser app can call these directly
+from any origin. This is for local dev convenience only — don't reuse these wide-open CORS settings
+on anything exposed.
 
 Stop / clean up:
 

@@ -1,0 +1,71 @@
+name: Contract
+
+# Tier 2: exercise the live contract suite (src/contract/*.contract.test.ts) against
+# a REAL backend, one matrix leg per backend. The unit tier (pnpm test) runs in ci.yml;
+# this is what verifies our SDK usage survives what each backend actually returns.
+#
+# Backends are started from the same compose file shipped for users
+# (examples/local-backends), so CI and local dev exercise the identical setup.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    name: contract (${{ matrix.backend }})
+    runs-on: ubuntu-latest
+    # floci tracks :latest (a moving target), so it is informational, not a gate.
+    continue-on-error: ${{ matrix.experimental }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - backend: localstack
+            experimental: false
+          - backend: floci
+            experimental: true
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Start ${{ matrix.backend }}
+        working-directory: examples/local-backends
+        run: docker compose --profile ${{ matrix.backend }} up -d
+
+      - name: Wait for backend
+        run: |
+          # Both LocalStack and floci expose the same readiness endpoint.
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:4566/_localstack/health 2>/dev/null | grep -q '"services"'; then
+              echo "backend ready after ~$((i * 2))s"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::${{ matrix.backend }} did not become ready in time" >&2
+          exit 1
+
+      - name: Contract tests
+        env:
+          OC_ENDPOINT: http://localhost:4566
+        run: pnpm test:contract
+
+      - name: Backend logs (on failure)
+        if: failure()
+        working-directory: examples/local-backends
+        run: docker compose --profile ${{ matrix.backend }} logs --tail=200

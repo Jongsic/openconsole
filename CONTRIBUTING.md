@@ -34,6 +34,37 @@ pnpm test
 pnpm build
 ```
 
+## Testing
+
+OpenConsole has two test tiers:
+
+- **Unit (Tier 1)** — `pnpm test`. Runs offline in jsdom with the AWS SDK mocked
+  (`aws-sdk-client-mock`); render components via the helper in `src/test/render.tsx`. Tests are
+  colocated (`foo.ts` → `foo.test.ts`). This tier runs on every PR in CI.
+- **Contract (Tier 2)** — `pnpm test:contract`. Runs `src/contract/*.contract.test.ts` against a
+  **real** backend pointed to by `OC_ENDPOINT`, verifying our SDK usage survives what the backend
+  actually returns. The suite self-skips when no endpoint is set, so it passes cleanly offline. CI
+  runs it across backends (LocalStack, Floci) via the **Contract** workflow, starting them from
+  `examples/local-backends`. A backend returning "not implemented" or an error is fine — a contract
+  test fails only when *our* code mis-parses or crashes.
+
+  To run it locally against a backend:
+
+  ```bash
+  (cd examples/local-backends && docker compose --profile localstack up -d)
+  OC_ENDPOINT=http://localhost:4566 pnpm test:contract
+  ```
+
+### Testing policy
+
+- PRs that introduce new behavior or fix a bug should add or update tests covering it (a regression
+  test for fixes, where realistic).
+- PRs that change SDK calls, parsing/transform logic, or backend detection should extend the
+  contract tier when the behavior is only observable against a real backend.
+- Docs, formatting, comments, and low-risk refactors may not need new tests — but the existing
+  suite (`pnpm test`, `pnpm typecheck`, `pnpm lint`) must still pass.
+- If you skip tests, say why in the PR description.
+
 ## Guidelines
 
 - **Code style** is enforced by [Biome](https://biomejs.dev). Run `pnpm format` before committing.
@@ -42,6 +73,8 @@ pnpm build
 - **User-facing strings** must be added to both `src/i18n/en.json` and `src/i18n/ko.json`.
 - Add or update tests for non-trivial logic where practical.
 - Keep pull requests focused; describe what changed and why.
+- Do not include `Co-Authored-By` trailers for AI tools in commit messages. Attribution should be
+  limited to human contributors.
 
 ## Reporting bugs / requesting features
 
